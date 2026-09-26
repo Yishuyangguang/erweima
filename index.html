@@ -525,7 +525,8 @@
                 document.getElementById('combo-editor-modal').classList.remove('flex'); 
             },
             async handleComboFileSelect(event) {
-                const files = event.target.files || event.dataTransfer.files;
+                // 安全获取拖拽或点击上传的文件
+                const files = (event.target && event.target.files) || (event.dataTransfer && event.dataTransfer.files);
                 if (!files || files.length === 0) return;
                 
                 const dropZone = document.getElementById('combo-drop-zone'); 
@@ -562,6 +563,7 @@
                 this.renderComboItems(); 
             },
             
+            // HTML5 原生拖拽排序 (支持多媒体卡片换序)
             handleDragStart(e, index) { 
                 this.state.draggedItemIndex = index; 
                 e.dataTransfer.effectAllowed = "move"; 
@@ -639,7 +641,7 @@
                 this.closeComboEditor();
             },
 
-            // ================= 基础UI与全局拖拽上传 =================
+            // ================= 基础UI与全局拖拽上传修复 =================
             setMode(mode) { 
                 this.state.currentMode = mode; 
                 this.updateNavUI(); 
@@ -699,7 +701,7 @@
                         <div id="upload-drop-ui" class="relative w-full h-24 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center hover:bg-gray-100 hover:border-primary transition-all">
                             <input type="file" accept="${cfg.accept}" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="app.handleMainFileSelect(event)">
                             <i class="fas fa-cloud-upload-alt text-2xl text-gray-400 mb-1"></i>
-                            <p class="text-sm text-gray-500">点击或直接拖拽文件</p>
+                            <p class="text-sm text-gray-500">点击或将文件直接拖拽至任意位置</p>
                         </div>
                         <div id="upload-progress-ui" class="hidden w-full h-24 bg-blue-50 rounded-xl border-2 border-primary flex items-center justify-center">
                             <i class="fas fa-spinner fa-spin text-2xl text-primary mr-2"></i>
@@ -710,7 +712,8 @@
             },
             async handleMainFileSelect(event) {
                 if (!this.state.isAdmin) return;
-                const files = event.target.files || event.dataTransfer.files;
+                // 安全获取对象
+                const files = (event.target && event.target.files) || (event.dataTransfer && event.dataTransfer.files);
                 if (!files || files.length === 0) return;
                 
                 document.getElementById('upload-drop-ui').classList.add('hidden'); 
@@ -735,30 +738,55 @@
                 document.getElementById('upload-drop-ui').classList.remove('hidden'); 
                 document.getElementById('upload-progress-ui').classList.add('hidden');
             },
+            
+            // 修复版的全局拖拽事件委托
             bindDragAndDrop() {
-                const dropZone = document.getElementById('drop-zone'); 
-                const panel = document.getElementById('input-panel'); 
-                const comboModal = document.getElementById('combo-editor-modal');
+                const dropZone = document.body;
                 
                 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
-                    comboModal.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
+                    // 注意：删除了 e.stopPropagation() 以防止内部组件阻断事件
+                    dropZone.addEventListener(eventName, e => { e.preventDefault(); }, false);
                 });
                 
-                dropZone.addEventListener('dragenter', () => { 
-                    if(this.state.isAdmin && comboModal.classList.contains('hidden')) panel.classList.add('drag-active'); 
+                dropZone.addEventListener('dragenter', (e) => { 
+                    if (!this.state.isAdmin) return;
+                    const comboModal = document.getElementById('combo-editor-modal');
+                    if (comboModal && !comboModal.classList.contains('hidden')) {
+                        const comboDropZone = document.getElementById('combo-drop-zone');
+                        if (comboDropZone) comboDropZone.classList.add('drag-active');
+                    } else {
+                        const panel = document.getElementById('input-panel');
+                        if (panel) panel.classList.add('drag-active');
+                    }
                 }, false);
                 
-                dropZone.addEventListener('dragleave', () => panel.classList.remove('drag-active'), false);
+                dropZone.addEventListener('dragleave', (e) => { 
+                    // 仅当离开屏幕范围时才取消高亮，防止闪烁
+                    if (e.relatedTarget === null) {
+                        const panel = document.getElementById('input-panel');
+                        const comboDropZone = document.getElementById('combo-drop-zone');
+                        if (panel) panel.classList.remove('drag-active');
+                        if (comboDropZone) comboDropZone.classList.remove('drag-active');
+                    }
+                }, false);
                 
                 dropZone.addEventListener('drop', (e) => {
-                    panel.classList.remove('drag-active');
-                    if(this.state.isAdmin && e.dataTransfer.files.length > 0) {
-                        if (!comboModal.classList.contains('hidden')) this.handleComboFileSelect(e); 
-                        else this.handleMainFileSelect(e);
+                    const panel = document.getElementById('input-panel');
+                    const comboDropZone = document.getElementById('combo-drop-zone');
+                    if (panel) panel.classList.remove('drag-active');
+                    if (comboDropZone) comboDropZone.classList.remove('drag-active');
+                    
+                    if(this.state.isAdmin && e.dataTransfer && e.dataTransfer.files.length > 0) {
+                        const comboModal = document.getElementById('combo-editor-modal');
+                        if (comboModal && !comboModal.classList.contains('hidden')) {
+                            this.handleComboFileSelect(e); 
+                        } else {
+                            this.handleMainFileSelect(e);
+                        }
                     }
                 }, false);
             },
+            
             addCurrentBlock() {
                 if (!this.state.isAdmin) return;
                 const mode = this.state.currentMode;
@@ -795,7 +823,7 @@
                 if (this.state.currentMode === 'uploaded') this.renderInputArea();
             },
 
-            // ================= 视图渲染与多媒体解析 =================
+            // ================= 视图渲染与多媒体预览 =================
             openDocumentPreview(url, name) {
                 const ext = name.split('.').pop().toLowerCase();
                 const absoluteUrl = url.startsWith('http') ? url : (window.location.origin + url);
@@ -1046,6 +1074,7 @@
             }
         };
 
+        // DOM 挂载完毕后启动架构
         document.addEventListener('DOMContentLoaded', () => app.init());
     </script>
 </body>
