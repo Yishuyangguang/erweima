@@ -441,53 +441,137 @@
                 }
             },
             
-            // ================= 极速并发上传核心架构 =================
-            // 暴露原生的 Promise 包装供并发引擎调用
+            // ================= 【核心：极速切片与并发并发网络层引擎】 =================
             async uploadFilesConcurrent(files, progressCallback) {
                 if (!this.state.isAdmin) return [];
                 
                 const totalSize = Array.from(files).reduce((sum, f) => sum + f.size, 0);
                 const loadedMap = new Map();
+                // 15MB 分片界限 (超过即激活 R2 分片技术突破 100MB 限制)
+                const CHUNK_SIZE = 15 * 1024 * 1024; 
                 
-                const uploadPromises = Array.from(files).map(file => {
-                    return new Promise((resolve) => {
-                        const formData = new FormData(); 
-                        formData.append('file', file);
-                        
-                        const xhr = new XMLHttpRequest();
-                        xhr.open('POST', '/api/upload', true);
-                        xhr.setRequestHeader('Authorization', `Bearer ${this.state.token}`);
-                        
-                        xhr.upload.onprogress = (event) => {
-                            if (event.lengthComputable) {
-                                loadedMap.set(file.name, event.loaded);
-                                const currentLoaded = Array.from(loadedMap.values()).reduce((a, b) => a + b, 0);
-                                const percent = Math.floor((currentLoaded / totalSize) * 100);
-                                if (progressCallback) progressCallback(percent);
-                            }
-                        };
-                        
-                        xhr.onload = () => {
-                            if (xhr.status === 200) {
-                                try {
-                                    resolve({ file: file, data: JSON.parse(xhr.responseText) });
-                                } catch(e) {
+                const uploadPromises = Array.from(files).map(async (file) => {
+                    
+                    if (file.size <= CHUNK_SIZE) {
+                        // 1. 小于 15MB 走高速直传单线程
+                        return new Promise((resolve) => {
+                            const formData = new FormData(); 
+                            formData.append('file', file);
+                            
+                            const xhr = new XMLHttpRequest();
+                            xhr.open('POST', '/api/upload', true);
+                            xhr.setRequestHeader('Authorization', `Bearer ${this.state.token}`);
+                            
+                            xhr.upload.onprogress = (event) => {
+                                if (event.lengthComputable) {
+                                    loadedMap.set(file.name, event.loaded);
+                                    const currentLoaded = Array.from(loadedMap.values()).reduce((a, b) => a + b, 0);
+                                    const percent = Math.floor((currentLoaded / totalSize) * 100);
+                                    if (progressCallback) progressCallback(percent);
+                                }
+                            };
+                            
+                            xhr.onload = () => {
+                                if (xhr.status === 200) {
+                                    try {
+                                        resolve({ file: file, data: JSON.parse(xhr.responseText) });
+                                    } catch(e) {
+                                        resolve({ file: file, data: null });
+                                    }
+                                } else {
+                                    try {
+                                        const errData = JSON.parse(xhr.responseText);
+                                        alert(`上传失败: ${errData.message}`);
+                                    } catch(e) {}
                                     resolve({ file: file, data: null });
                                 }
-                            } else {
-                                try {
-                                    const errData = JSON.parse(xhr.responseText);
-                                    alert(`上传失败: ${errData.message}`);
-                                } catch(e) {}
-                                resolve({ file: file, data: null });
-                            }
-                        };
+                            };
+                            
+                            xhr.onerror = () => { resolve({ file: file, data: null }); };
+                            xhr.send(formData);
+                        });
                         
-                        xhr.onerror = () => { resolve({ file: file, data: null }); };
-                        xhr.send(formData);
-                    });
+                    } else {
+                        // 2. 超大文件 (>15MB 到 5GB) 开启暴力分块流式上传架构
+                        try {
+                            // 初始化分片请求获取通行证
+                            let res = await fetch('/api/upload/init', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.token}` },
+                                body: JSON.stringify({ filename: file.name, mimeType: file.type || 'application/octet-stream' })
+                            });
+                            
+                            const initData = await res.json();
+                            if (!initData.success) throw new Error(initData.message || '初始化分片失败');
+                            const { key, uploadId } = initData;
+
+                            const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+                            const parts = [];
+                            let fileLoaded = 0;
+
+                            // 串行执行切片，防止一次性撑爆浏览器内存，但借助 XMLHttpRequest 保持非阻塞流
+                            for (let i = 0; i < totalChunks; i++) {
+                                const start = i * CHUNK_SIZE;
+                                const end = Math.min(start + CHUNK_SIZE, file.size);
+                                const chunk = file.slice(start, end);
+
+                                const chunkData = await new Promise((resolve, reject) => {
+                                    const xhr = new XMLHttpRequest();
+                                    // 绕过 FormData，直接灌入原始 Blob 实现 0 内存开销传输
+                                    xhr.open('POST', `/api/upload/part?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${i + 1}`, true);
+                                    xhr.setRequestHeader('Authorization', `Bearer ${this.state.token}`);
+                                    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+                                    
+                                    let lastChunkLoaded = 0;
+                                    xhr.upload.onprogress = (event) => {
+                                        if (event.lengthComputable) {
+                                            const diff = event.loaded - lastChunkLoaded;
+                                            lastChunkLoaded = event.loaded;
+                                            fileLoaded += diff;
+                                            
+                                            // 汇总并发池总数据
+                                            loadedMap.set(file.name, fileLoaded);
+                                            const currentLoaded = Array.from(loadedMap.values()).reduce((a, b) => a + b, 0);
+                                            const percent = Math.floor((currentLoaded / totalSize) * 100);
+                                            
+                                            if (progressCallback) progressCallback(percent);
+                                        }
+                                    };
+                                    
+                                    xhr.onload = () => {
+                                        if (xhr.status === 200) { 
+                                            resolve(JSON.parse(xhr.responseText).part); 
+                                        } else { 
+                                            reject(new Error(`分片 ${i+1} 云端拒收`)); 
+                                        }
+                                    };
+                                    xhr.onerror = () => reject(new Error('分片网络中断'));
+                                    xhr.send(chunk);
+                                });
+                                parts.push(chunkData);
+                            }
+
+                            // 指令下发，瞬间合并
+                            res = await fetch('/api/upload/complete', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.token}` },
+                                body: JSON.stringify({ key, uploadId, parts })
+                            });
+                            
+                            const compData = await res.json();
+                            if (!compData.success) throw new Error(compData.message || '合并分片失败');
+                            
+                            return { file: file, data: { success: true, url: compData.url, name: file.name, size: file.size } };
+                            
+                        } catch (e) {
+                            console.error(e);
+                            alert(`大文件 [${file.name}] 上传失败: \n${e.message}`);
+                            return { file: file, data: null };
+                        }
+                    }
                 });
                 
+                // 返回统一的并发池
                 return await Promise.all(uploadPromises);
             },
             
@@ -580,7 +664,7 @@
                 }, false);
             },
 
-            // ================= 游客端 一键极速打包下载 (无损STORE算法) =================
+            // ================= 【游客端】并发直联 + 极速打包引擎 (突破性能瓶颈) =================
             async downloadAllFiles() {
                 if (this.state.blocks.length === 0) {
                     return alert('当前页面没有任何内容可供下载。');
@@ -601,7 +685,6 @@
                     const tasks = [];
                     const namesTracker = {}; 
                     
-                    // 计算需要提取的文件总数用于进度
                     let totalTasks = 0;
                     let completedTasks = 0;
 
@@ -626,7 +709,7 @@
                                 fileCount++;
                                 completedTasks++;
                                 
-                                // 前 50% 进度归属于网络拉取
+                                // 并发拉取池占用前 50% 进度
                                 if (btn && totalTasks > 0) {
                                     const percent = Math.floor((completedTasks / totalTasks) * 50);
                                     btn.innerHTML = `<i class="fas fa-cloud-download-alt mr-2"></i> 极速拉取资源... ${percent}%`;
@@ -663,21 +746,21 @@
                         folder.file("页面文本内容摘要.txt", textSummary);
                     }
 
-                    // 并发极速拉取所有云端文件
+                    // 并发突发拉取
                     await Promise.all(tasks.map(t => t()));
 
                     if (fileCount === 0 && textSummary.trim().length <= 30) {
                         throw new Error('未找到任何可打包的文件资源');
                     }
 
-                    // 后 50% 进度归属于零压迫急速打包 (STORE技术，不损耗CPU，瞬间完成)
+                    // 启动压缩过程占用后 50% 进度 (使用极速无损模式 STORE)
                     const content = await zip.generateAsync({ 
                         type: "blob",
-                        compression: "STORE" 
+                        compression: "STORE"  // 突破暗病：规避高压缩比文件导致浏览器 CPU 满载假死
                     }, (metadata) => {
                         if (btn) {
                             const percent = 50 + Math.floor(metadata.percent / 2);
-                            btn.innerHTML = `<i class="fas fa-box text-xl mr-2"></i> 极速生成中... ${percent}%`;
+                            btn.innerHTML = `<i class="fas fa-box text-xl mr-2"></i> 极速生成压缩包中... ${percent}%`;
                         }
                     });
                     
@@ -736,7 +819,7 @@
                 
                 dropZone.innerHTML = `
                     <i class="fas fa-spinner fa-spin text-2xl text-primary mb-1"></i>
-                    <p class="text-sm font-medium" id="combo-upload-status">排队就绪中...</p>
+                    <p class="text-sm font-medium text-primary" id="combo-upload-status">排队就绪中...</p>
                 `;
                 
                 const results = await this.uploadFilesConcurrent(files, (percent) => {
@@ -940,9 +1023,13 @@
                 results.forEach(res => {
                     if (res.data && res.data.success) {
                         let type = 'document';
-                        if (res.file.type.startsWith('image/')) type = 'image'; 
-                        else if (res.file.type.startsWith('audio/')) type = 'audio'; 
-                        else if (res.file.type.startsWith('video/')) type = 'video';
+                        if (res.file.type.startsWith('image/')) {
+                            type = 'image'; 
+                        } else if (res.file.type.startsWith('audio/')) {
+                            type = 'audio'; 
+                        } else if (res.file.type.startsWith('video/')) {
+                            type = 'video';
+                        }
                         
                         this.addBlockToState(type, { 
                             url: res.data.url, 
@@ -1213,7 +1300,6 @@
                     </div>
                     <p class="text-center text-xs text-gray-300 mt-8 mb-6 tracking-widest uppercase">THE END</p>
                     
-                    <!-- 一键批量极速下载功能挂载区 -->
                     <div class="fixed bottom-0 left-0 w-full p-4 pb-8 bg-white/85 backdrop-blur-xl border-t border-gray-100 z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.06)]">
                         <button id="btn-batch-download" onclick="app.downloadAllFiles()" class="w-full max-w-lg mx-auto bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3.5 rounded-xl shadow-[0_4px_15px_rgba(30,144,255,0.3)] hover:shadow-[0_6px_25px_rgba(30,144,255,0.4)] hover:-translate-y-0.5 transition-all font-semibold flex items-center justify-center text-[15px] tracking-wide active:scale-95">
                             <i class="fas fa-cloud-download-alt mr-2 text-lg"></i> 一键打包下载全部内容
