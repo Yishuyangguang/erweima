@@ -3,10 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>高级动态活码管理系统</title>
+    <title>高级动态活码与资源分发系统</title>
+    <!-- Tailwind 样式引擎 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 活码生成引擎 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- JSZip 与 FileSaver 用于一键打包下载引擎 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -28,14 +33,14 @@
         .admin-only { display: none !important; }
         body.is-admin .admin-only { display: flex !important; }
         body.is-admin .admin-only-block { display: block !important; }
-        /* 拖拽排序时的视觉反馈 */
         .sortable-ghost { opacity: 0.4; background-color: #f0f9ff; border: 1px dashed #1E90FF; }
+        /* 移动端 H5 底部安全区与悬浮下载按钮占位 */
+        .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom) + 80px); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-8 px-4" id="drop-zone">
 
-    <!-- 顶部导航栏 (新增"图文组合") -->
-    <header class="w-full max-w-6xl flex justify-center gap-3 mb-8 flex-wrap">
+    <header class="w-full max-w-6xl flex justify-center gap-3 mb-8 flex-wrap admin-only">
         <button onclick="app.setMode('text')" class="nav-btn bg-white px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-gray-600 active-nav">文本</button>
         <button onclick="app.setMode('url')" class="nav-btn bg-white px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-gray-600">网址</button>
         <button onclick="app.setMode('image')" class="nav-btn bg-white px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-gray-600">图片</button>
@@ -44,29 +49,16 @@
         <button onclick="app.setMode('document')" class="nav-btn bg-white px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-gray-600">文档</button>
         <button onclick="app.setMode('form')" class="nav-btn bg-white px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-gray-600">表单</button>
         
-        <!-- 全能组合触发按钮 -->
-        <button onclick="app.openComboEditor()" class="admin-only bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-2 rounded-full shadow-md hover:shadow-lg transition-all text-white font-semibold flex items-center">
+        <button onclick="app.openComboEditor()" class="bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-2 rounded-full shadow-md hover:shadow-lg transition-all text-white font-semibold flex items-center">
             <i class="fas fa-cubes text-sm mr-2"></i>组合上传
         </button>
 
-        <button onclick="app.setMode('uploaded')" class="nav-btn bg-blue-50 border border-blue-100 px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-primary font-semibold flex items-center admin-only"><i class="fas fa-cloud text-sm mr-2"></i>已上传</button>
+        <button onclick="app.setMode('uploaded')" class="nav-btn bg-blue-50 border border-blue-100 px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-primary font-semibold flex items-center"><i class="fas fa-cloud text-sm mr-2"></i>已上传</button>
     </header>
 
-    <!-- 核心工作区 -->
-    <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- 左侧区域 -->
+    <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-3 gap-6 admin-only">
         <section class="lg:col-span-2 flex flex-col gap-4 relative">
-            
-            <div id="tourist-mask" class="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center rounded-2xl">
-                <i class="fas fa-lock text-4xl text-gray-300 mb-4"></i>
-                <h3 class="text-lg font-semibold text-gray-700">游客访问模式</h3>
-                <p class="text-sm text-gray-500 mt-2 text-center px-8">您当前处于只读模式。仅能扫描右侧二维码并浏览实时内容。</p>
-                <button onclick="document.getElementById('login-modal').classList.remove('hidden')" class="mt-6 bg-primary text-white px-6 py-2 rounded-full shadow-lg hover:bg-blue-600 transition-all">管理员登录</button>
-            </div>
-
-            <!-- 常规输入面板 -->
-            <div id="input-panel" class="bg-white rounded-2xl shadow-soft p-6 relative border-2 border-dashed border-transparent transition-all admin-only-block">
+            <div id="input-panel" class="bg-white rounded-2xl shadow-soft p-6 relative border-2 border-dashed border-transparent transition-all">
                 <div class="flex justify-between items-center mb-4">
                     <h2 id="panel-title" class="text-lg font-semibold text-gray-700"><i class="fas fa-keyboard text-primary mr-2"></i>添加文本</h2>
                     <span class="text-xs text-gray-400">支持直接拖拽资源</span>
@@ -78,17 +70,15 @@
                 </div>
             </div>
 
-            <!-- 在线组合内容展示 -->
             <div class="bg-white rounded-2xl shadow-soft p-6 min-h-[300px]">
                 <div class="flex justify-between items-center mb-4 border-b pb-2">
                     <h3 class="text-md font-semibold text-gray-700">当前在线流 (扫码可见)</h3>
-                    <button onclick="app.syncToCloud()" class="admin-only bg-green-500 text-white px-4 py-1.5 text-sm rounded hover:bg-green-600 transition-all shadow"><i class="fas fa-rotate mr-1"></i> 发布至前端</button>
+                    <button onclick="app.syncToCloud()" class="bg-green-500 text-white px-4 py-1.5 text-sm rounded hover:bg-green-600 transition-all shadow"><i class="fas fa-rotate mr-1"></i> 发布至前端</button>
                 </div>
                 <div id="blocks-container" class="flex flex-col gap-4 w-full"></div>
             </div>
         </section>
 
-        <!-- 右侧活码区 -->
         <aside class="w-full flex flex-col gap-4 relative">
             <div class="bg-white rounded-2xl shadow-soft p-8 flex flex-col items-center sticky top-8">
                 <div id="qrcode-container" class="w-56 h-56 bg-gray-50 flex items-center justify-center rounded-2xl mb-6 relative overflow-hidden transition-all shadow-inner mt-4">
@@ -104,7 +94,10 @@
         </aside>
     </main>
 
-    <!-- 【全屏核心组件】组合全能编辑器 (Combo Editor) -->
+    <!-- H5 游客实时预览容器 (移动端入口) -->
+    <div id="mobile-live-container" class="hidden w-full max-w-lg mx-auto bg-gray-50 min-h-screen pb-safe"></div>
+
+    <!-- 组合编辑器 (Combo Editor) -->
     <div id="combo-editor-modal" class="fixed inset-0 bg-gray-100 z-[150] hidden flex-col">
         <div class="h-16 bg-white shadow-sm flex items-center justify-between px-6 border-b shrink-0">
             <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-cubes text-primary mr-2"></i>全能图文组合创作</h2>
@@ -113,49 +106,29 @@
                 <button onclick="app.saveCombo()" class="px-5 py-1.5 bg-primary text-white rounded-full hover:bg-blue-600 shadow transition-all font-medium">确认组合并添加</button>
             </div>
         </div>
-
         <div class="flex-1 overflow-y-auto p-6 flex flex-col items-center">
             <div class="w-full max-w-4xl bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-6">
-                
-                <!-- 头部设置区 -->
                 <div class="flex flex-col gap-2">
                     <input type="text" id="combo-title" placeholder="输入大标题 (选填)" class="w-full text-2xl font-bold border-none outline-none placeholder-gray-300 focus:ring-0">
                     <div class="flex gap-4 items-center bg-gray-50 p-2 rounded-lg border">
                         <i class="fas fa-text-height text-gray-400 ml-2"></i>
                         <select id="combo-size" class="bg-transparent border-none outline-none text-sm text-gray-600 font-medium">
-                            <option value="text-sm">偏小字体</option>
-                            <option value="text-base" selected>标准字体</option>
-                            <option value="text-lg">偏大字体</option>
-                            <option value="text-xl">特大字体</option>
+                            <option value="text-sm">偏小字体</option><option value="text-base" selected>标准字体</option>
+                            <option value="text-lg">偏大字体</option><option value="text-xl">特大字体</option>
                         </select>
-                        <span class="w-px h-4 bg-gray-300"></span>
-                        <i class="fas fa-palette text-gray-400"></i>
+                        <span class="w-px h-4 bg-gray-300"></span><i class="fas fa-palette text-gray-400"></i>
                         <select id="combo-color" class="bg-transparent border-none outline-none text-sm text-gray-600 font-medium">
-                            <option value="text-gray-800" selected>深灰 (默认)</option>
-                            <option value="text-blue-600">商务蓝</option>
-                            <option value="text-red-600">警示红</option>
-                            <option value="text-green-600">健康绿</option>
-                            <option value="text-gray-500">浅灰说明</option>
+                            <option value="text-gray-800" selected>深灰 (默认)</option><option value="text-blue-600">商务蓝</option>
+                            <option value="text-red-600">警示红</option><option value="text-green-600">健康绿</option><option value="text-gray-500">浅灰说明</option>
                         </select>
                     </div>
                 </div>
-
-                <!-- 文本输入区 -->
                 <textarea id="combo-text" placeholder="在此输入自定义正文内容..." class="w-full h-40 resize-none border-none outline-none text-base placeholder-gray-300 leading-relaxed"></textarea>
-
-                <!-- 多媒体资产挂载区 -->
                 <div class="border-t pt-6 mt-2">
                     <div class="flex justify-between items-end mb-4">
-                        <h3 class="font-semibold text-gray-700">多媒体资产与附件</h3>
-                        <span class="text-xs text-gray-400">支持拖拽排序，向下滚动查看</span>
+                        <h3 class="font-semibold text-gray-700">多媒体资产与附件</h3><span class="text-xs text-gray-400">支持拖拽排序，向下滚动查看</span>
                     </div>
-
-                    <!-- 原生拖拽排序列表 -->
-                    <ul id="combo-items-list" class="flex flex-col gap-3 mb-4 min-h-[50px]">
-                        <!-- 由 JS 渲染注入 -->
-                    </ul>
-
-                    <!-- 专属媒体上传区 -->
+                    <ul id="combo-items-list" class="flex flex-col gap-3 mb-4 min-h-[50px]"></ul>
                     <div id="combo-drop-zone" class="relative w-full h-24 bg-blue-50/50 rounded-xl border-2 border-dashed border-blue-200 flex flex-col items-center justify-center hover:bg-blue-50 transition-all group">
                         <input type="file" id="combo-file-input" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="app.handleComboFileSelect(event)">
                         <i class="fas fa-plus-circle text-2xl text-blue-300 group-hover:text-primary transition-colors mb-1"></i>
@@ -166,24 +139,33 @@
         </div>
     </div>
 
-    <!-- 系统通用悬浮组件 -->
-    <button onclick="document.getElementById('login-modal').classList.remove('hidden')" id="admin-float-btn" class="fixed bottom-6 right-6 w-12 h-12 bg-gray-800 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-gray-700 transition-all z-50"><i class="fas fa-user-shield"></i></button>
+    <!-- 鉴权模态框 -->
+    <div id="tourist-mask" class="fixed inset-0 bg-white/90 backdrop-blur-md z-40 flex flex-col items-center justify-center">
+        <i class="fas fa-shield-alt text-6xl text-gray-300 mb-6"></i>
+        <h3 class="text-2xl font-semibold text-gray-700">内容管理控制台</h3>
+        <p class="text-sm text-gray-500 mt-3 text-center px-8">本后台仅供管理员访问，负责拼装内容、修改页面与更新活码。<br>若您是访客，请直接扫描二维码查看内容。</p>
+        <button onclick="document.getElementById('login-modal').classList.remove('hidden')" class="mt-8 bg-primary text-white px-8 py-3 rounded-full shadow-lg hover:bg-blue-600 transition-all font-medium text-lg">验证管理员身份</button>
+    </div>
+
     <button onclick="app.logout()" id="logout-float-btn" class="admin-only fixed bottom-6 right-6 w-12 h-12 bg-red-500 text-white rounded-full shadow-xl items-center justify-center hover:bg-red-600 transition-all z-50"><i class="fas fa-sign-out-alt"></i></button>
 
-    <div id="login-modal" class="fixed inset-0 bg-black/50 z-[200] hidden flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white rounded-2xl p-6 w-80 shadow-2xl">
-            <h3 class="text-lg font-semibold mb-4 text-center">系统后台登录</h3>
-            <input type="password" id="admin-pwd" class="w-full p-2 border rounded mb-4 outline-none" placeholder="请输入口令">
+    <div id="login-modal" class="fixed inset-0 bg-black/60 z-[200] hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-2xl p-8 w-80 shadow-2xl transform transition-all scale-100 relative">
+            <h3 class="text-xl font-bold mb-6 text-center text-gray-800">系统鉴权</h3>
+            <div class="mb-5">
+                <label class="block text-xs text-gray-500 mb-2">安全校验口令 (由 CF 环境变量设置)</label>
+                <input type="password" id="admin-pwd" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="请输入密码">
+            </div>
             <div class="flex gap-3">
-                <button onclick="document.getElementById('login-modal').classList.add('hidden')" class="flex-1 py-2 bg-gray-100 rounded">取消</button>
-                <button onclick="app.login()" class="flex-1 py-2 bg-primary text-white rounded">验证</button>
+                <button onclick="document.getElementById('login-modal').classList.add('hidden')" class="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-all font-medium">取消</button>
+                <button onclick="app.login()" class="flex-1 py-2.5 bg-primary text-white rounded-lg hover:bg-blue-600 transition-all font-medium shadow-md">登录</button>
             </div>
         </div>
     </div>
 
-    <div id="preview-modal" class="fixed inset-0 bg-black/80 z-[250] hidden flex flex-col items-center justify-center backdrop-blur-sm">
+    <div id="preview-modal" class="fixed inset-0 bg-black/85 z-[250] hidden flex flex-col items-center justify-center backdrop-blur-sm">
         <div class="absolute top-4 right-4"><button onclick="app.closePreview()" class="text-white hover:text-gray-300 text-3xl"><i class="fas fa-times"></i></button></div>
-        <div id="preview-content" class="w-11/12 h-5/6 bg-white rounded-xl overflow-hidden flex items-center justify-center relative"></div>
+        <div id="preview-content" class="w-11/12 h-5/6 bg-transparent rounded-xl overflow-hidden flex items-center justify-center relative"></div>
     </div>
 
     <script>
@@ -194,16 +176,9 @@
                 isAdmin: false,
                 token: sessionStorage.getItem('adminToken') || '',
                 liveUrl: window.location.origin + window.location.pathname + '?view=live',
-                
-                // 全能组合工作流状态机
-                comboDraft: {
-                    title: '',
-                    text: '',
-                    size: 'text-base',
-                    color: 'text-gray-800',
-                    items: []
-                },
-                draggedItemIndex: null // 用于记录拖拽排序的初始索引
+                comboDraft: { title: '', text: '', size: 'text-base', color: 'text-gray-800', items: [] },
+                draggedItemIndex: null,
+                isLiveMode: false
             },
 
             configs: {
@@ -220,7 +195,10 @@
             async init() {
                 const urlParams = new URLSearchParams(window.location.search);
                 if (urlParams.get('view') === 'live') {
-                    document.body.innerHTML = '<div class="p-4 flex flex-col gap-4 max-w-lg mx-auto bg-gray-50 min-h-screen" id="mobile-live-container"></div>';
+                    this.state.isLiveMode = true;
+                    document.getElementById('mobile-live-container').classList.remove('hidden');
+                    document.getElementById('mobile-live-container').classList.add('flex', 'flex-col');
+                    document.getElementById('tourist-mask').classList.add('hidden');
                     await this.fetchCloudConfig();
                     this.renderLiveH5();
                     return;
@@ -237,7 +215,6 @@
                 this.renderQR(); 
             },
 
-            // 鉴权模块
             async login() {
                 const pwd = document.getElementById('admin-pwd').value;
                 try {
@@ -247,8 +224,8 @@
                         sessionStorage.setItem('adminToken', pwd);
                         document.getElementById('login-modal').classList.add('hidden');
                         this.enableAdminMode();
-                    } else alert('密码错误');
-                } catch (e) { alert('后端连接异常'); }
+                    } else alert('⚠️ 鉴权失败：密码错误，请检查您的 CF 环境变量。');
+                } catch (e) { alert('后端连接异常，请确认 CF Pages 部署状态'); }
             },
             async verifyTokenSilent() {
                 try {
@@ -260,28 +237,27 @@
             logout() { this.state.token = ''; sessionStorage.removeItem('adminToken'); this.enforceTouristMode(); },
             enableAdminMode() {
                 this.state.isAdmin = true; document.body.classList.add('is-admin');
-                document.getElementById('tourist-mask').classList.add('hidden'); document.getElementById('admin-float-btn').classList.add('hidden');
+                document.getElementById('tourist-mask').classList.add('hidden');
                 if(this.state.currentMode === 'uploaded') this.renderInputArea();
             },
             enforceTouristMode() {
                 this.state.isAdmin = false; document.body.classList.remove('is-admin');
-                document.getElementById('tourist-mask').classList.remove('hidden'); document.getElementById('admin-float-btn').classList.remove('hidden');
+                document.getElementById('tourist-mask').classList.remove('hidden');
             },
 
-            // R2 后端网络层交互
             async fetchCloudConfig() {
                 try {
                     const res = await fetch('/api/config');
                     if (res.ok) {
                         this.state.blocks = await res.json() || [];
-                        this.renderBlocks();
+                        if(!this.state.isLiveMode) this.renderBlocks();
                     }
                 } catch (e) {}
             },
             async syncToCloud() {
                 if (!this.state.isAdmin) return;
                 const res = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.token}` }, body: JSON.stringify(this.state.blocks) });
-                if (res.ok) alert('🚀 全局流水线发布成功，用户扫码将看到最新内容！');
+                if (res.ok) alert('🚀 全局流水线发布成功，扫码用户将立刻看到最新内容！');
                 else alert('发布失败');
             },
             async uploadFileToBackend(file) {
@@ -292,157 +268,160 @@
                     return res.ok ? await res.json() : null;
                 } catch (e) { return null; }
             },
-            
-            // 核心：调用 R2 删除废弃文件（缓存自动清理）
             async deleteCloudFile(url) {
                 if (!url.startsWith('/r2/')) return;
                 try {
-                    await fetch('/api/file', {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.token}` },
-                        body: JSON.stringify({ url: url })
+                    await fetch('/api/file', { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.token}` }, body: JSON.stringify({ url: url }) });
+                } catch (e) {}
+            },
+
+            // =============== 游客端 一键打包下载 (ZIP) 引擎 ===============
+            async downloadAllFiles() {
+                if (this.state.blocks.length === 0) return alert('当前页面没有任何内容可供下载。');
+                
+                const btn = document.getElementById('btn-batch-download');
+                if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 资源抓取打包中，请稍候...';
+
+                try {
+                    const zip = new JSZip();
+                    const folder = zip.folder("一键下载资产包");
+                    
+                    let textSummary = "===== 页面内容与文本摘要 =====\n\n";
+                    let fileCount = 0;
+                    
+                    // 递归收集文件任务
+                    const tasks = [];
+                    const namesTracker = {}; // 记录文件名防止冲突重叠
+
+                    const addFileTask = (url, originalName) => {
+                        tasks.push(async () => {
+                            try {
+                                const response = await fetch(url);
+                                const blob = await response.blob();
+                                
+                                // 防冲突重名处理
+                                let safeName = originalName || `文件_${Date.now()}.bin`;
+                                if (namesTracker[safeName]) {
+                                    const parts = safeName.split('.');
+                                    const ext = parts.length > 1 ? '.' + parts.pop() : '';
+                                    safeName = `${parts.join('.')} (${namesTracker[safeName]})${ext}`;
+                                    namesTracker[originalName]++;
+                                } else {
+                                    namesTracker[safeName] = 1;
+                                }
+
+                                folder.file(safeName, blob);
+                                fileCount++;
+                            } catch (err) {
+                                console.error(`文件下载失败: ${originalName}`, err);
+                            }
+                        });
+                    };
+
+                    this.state.blocks.forEach(block => {
+                        if (block.type === 'text') textSummary += `[独立文本]\n${block.content}\n\n`;
+                        if (block.type === 'url') textSummary += `[相关链接]\n${block.content}\n\n`;
+                        
+                        if (['image', 'audio', 'video', 'document'].includes(block.type)) {
+                            addFileTask(block.content.url, block.content.name);
+                        }
+
+                        if (block.type === 'combo') {
+                            if (block.content.title || block.content.text) {
+                                textSummary += `[组合: ${block.content.title || '无题'}]\n${block.content.text || ''}\n\n`;
+                            }
+                            if (block.content.items && block.content.items.length > 0) {
+                                block.content.items.forEach(item => {
+                                    addFileTask(item.url, item.name);
+                                });
+                            }
+                        }
                     });
-                    console.log('✅ 垃圾回收成功: ', url);
+
+                    // 文本聚合进ZIP
+                    if (textSummary.trim().length > 30) {
+                        folder.file("页面文本内容摘要.txt", textSummary);
+                    }
+
+                    // 并发抓取资源
+                    await Promise.all(tasks.map(t => t()));
+
+                    if (fileCount === 0 && textSummary.trim().length <= 30) {
+                        throw new Error('未找到任何可打包的文件资源');
+                    }
+
+                    // 生成压缩包并保存
+                    const content = await zip.generateAsync({ type: "blob" });
+                    saveAs(content, `全部资源打包_${new Date().getTime()}.zip`);
+                    
+                    if (btn) {
+                        btn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> 下载完成';
+                        btn.classList.replace('bg-primary', 'bg-green-500');
+                        setTimeout(() => {
+                            btn.innerHTML = '<i class="fas fa-cloud-download-alt mr-2"></i> 一键打包下载全部内容';
+                            btn.classList.replace('bg-green-500', 'bg-primary');
+                        }, 3000);
+                    }
                 } catch (e) {
-                    console.error('回收失败: ', url);
+                    alert('打包下载失败，可能网络中断或跨域限制。');
+                    if (btn) btn.innerHTML = '<i class="fas fa-cloud-download-alt mr-2"></i> 一键打包下载全部内容';
                 }
             },
 
-            // 组合上传模式 (Combo Editor) 全流程逻辑
+            // 组合编辑器逻辑
             openComboEditor() {
                 this.state.comboDraft = { title: '', text: '', size: 'text-base', color: 'text-gray-800', items: [] };
-                document.getElementById('combo-title').value = '';
-                document.getElementById('combo-text').value = '';
-                document.getElementById('combo-size').value = 'text-base';
-                document.getElementById('combo-color').value = 'text-gray-800';
+                document.getElementById('combo-title').value = ''; document.getElementById('combo-text').value = '';
+                document.getElementById('combo-size').value = 'text-base'; document.getElementById('combo-color').value = 'text-gray-800';
                 this.renderComboItems();
-                document.getElementById('combo-editor-modal').classList.remove('hidden');
-                document.getElementById('combo-editor-modal').classList.add('flex');
+                document.getElementById('combo-editor-modal').classList.remove('hidden'); document.getElementById('combo-editor-modal').classList.add('flex');
             },
-            closeComboEditor() {
-                document.getElementById('combo-editor-modal').classList.add('hidden');
-                document.getElementById('combo-editor-modal').classList.remove('flex');
-            },
+            closeComboEditor() { document.getElementById('combo-editor-modal').classList.add('hidden'); document.getElementById('combo-editor-modal').classList.remove('flex'); },
             async handleComboFileSelect(event) {
                 const files = event.target.files || event.dataTransfer.files;
                 if (!files || files.length === 0) return;
-                
-                const dropZone = document.getElementById('combo-drop-zone');
-                const originHtml = dropZone.innerHTML;
+                const dropZone = document.getElementById('combo-drop-zone'); const originHtml = dropZone.innerHTML;
                 dropZone.innerHTML = `<i class="fas fa-spinner fa-spin text-2xl text-primary mb-1"></i><p class="text-sm">安全写入云端中...</p>`;
-
                 for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    const uploadResult = await this.uploadFileToBackend(file);
+                    const uploadResult = await this.uploadFileToBackend(files[i]);
                     if (uploadResult && uploadResult.success) {
                         let type = 'document';
-                        if (file.type.startsWith('image/')) type = 'image';
-                        else if (file.type.startsWith('audio/')) type = 'audio';
-                        else if (file.type.startsWith('video/')) type = 'video';
-                        
-                        this.state.comboDraft.items.push({
-                            id: 'item_' + Date.now() + Math.floor(Math.random()*100),
-                            type: type, url: uploadResult.url, name: uploadResult.name, size: (uploadResult.size/1024/1024).toFixed(2) + ' MB'
-                        });
+                        if (files[i].type.startsWith('image/')) type = 'image'; else if (files[i].type.startsWith('audio/')) type = 'audio'; else if (files[i].type.startsWith('video/')) type = 'video';
+                        this.state.comboDraft.items.push({ id: 'item_' + Date.now() + Math.floor(Math.random()*100), type: type, url: uploadResult.url, name: uploadResult.name, size: (uploadResult.size/1024/1024).toFixed(2) + ' MB' });
                     }
                 }
-                dropZone.innerHTML = originHtml;
-                this.renderComboItems();
+                dropZone.innerHTML = originHtml; this.renderComboItems();
             },
-            removeComboItem(index) {
-                const item = this.state.comboDraft.items[index];
-                // 组合编辑中移除，立即销毁云端物理文件
-                this.deleteCloudFile(item.url); 
-                this.state.comboDraft.items.splice(index, 1);
-                this.renderComboItems();
-            },
+            removeComboItem(index) { this.deleteCloudFile(this.state.comboDraft.items[index].url); this.state.comboDraft.items.splice(index, 1); this.renderComboItems(); },
             
-            // HTML5 原生拖拽排序 (Combo Items)
-            handleDragStart(e, index) {
-                this.state.draggedItemIndex = index;
-                e.dataTransfer.effectAllowed = "move";
-                e.target.classList.add('sortable-ghost');
-            },
-            handleDragOver(e, index) {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = "move";
-            },
+            handleDragStart(e, index) { this.state.draggedItemIndex = index; e.dataTransfer.effectAllowed = "move"; e.target.classList.add('sortable-ghost'); },
+            handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; },
             handleDrop(e, targetIndex) {
-                e.preventDefault();
-                const sourceIndex = this.state.draggedItemIndex;
+                e.preventDefault(); const sourceIndex = this.state.draggedItemIndex;
                 if (sourceIndex !== null && sourceIndex !== targetIndex) {
-                    // 数组位置互换
-                    const items = this.state.comboDraft.items;
-                    const [removed] = items.splice(sourceIndex, 1);
-                    items.splice(targetIndex, 0, removed);
-                    this.renderComboItems();
+                    const items = this.state.comboDraft.items; const [removed] = items.splice(sourceIndex, 1); items.splice(targetIndex, 0, removed); this.renderComboItems();
                 }
             },
-            handleDragEnd(e) {
-                e.target.classList.remove('sortable-ghost');
-                this.state.draggedItemIndex = null;
-            },
-
+            handleDragEnd(e) { e.target.classList.remove('sortable-ghost'); this.state.draggedItemIndex = null; },
             renderComboItems() {
-                const list = document.getElementById('combo-items-list');
-                list.innerHTML = '';
+                const list = document.getElementById('combo-items-list'); list.innerHTML = '';
                 this.state.comboDraft.items.forEach((item, index) => {
-                    const li = document.createElement('li');
-                    li.draggable = true;
+                    const li = document.createElement('li'); li.draggable = true;
                     li.className = 'flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-move hover:shadow-sm transition-all group';
-                    
-                    // 绑定 H5 拖拽事件
-                    li.ondragstart = (e) => this.handleDragStart(e, index);
-                    li.ondragover = (e) => this.handleDragOver(e, index);
-                    li.ondrop = (e) => this.handleDrop(e, index);
-                    li.ondragend = (e) => this.handleDragEnd(e);
-
-                    let icon = 'fa-file-alt text-gray-500';
-                    if(item.type === 'image') icon = 'fa-image text-blue-500';
-                    if(item.type === 'video') icon = 'fa-video text-purple-500';
-                    if(item.type === 'audio') icon = 'fa-music text-green-500';
-
-                    li.innerHTML = `
-                        <div class="flex items-center w-full truncate pr-4">
-                            <i class="fas fa-bars text-gray-300 mr-3"></i>
-                            <div class="w-8 h-8 rounded bg-white border flex items-center justify-center mr-3 shrink-0"><i class="fas ${icon}"></i></div>
-                            <div class="flex flex-col truncate">
-                                <span class="text-sm font-medium text-gray-700 truncate">${item.name}</span>
-                                <span class="text-xs text-gray-400">${item.size}</span>
-                            </div>
-                        </div>
-                        <button onclick="app.removeComboItem(${index})" class="text-gray-400 hover:text-red-500 shrink-0"><i class="fas fa-times-circle text-lg"></i></button>
-                    `;
+                    li.ondragstart = (e) => this.handleDragStart(e, index); li.ondragover = (e) => this.handleDragOver(e); li.ondrop = (e) => this.handleDrop(e, index); li.ondragend = (e) => this.handleDragEnd(e);
+                    let icon = 'fa-file-alt text-gray-500'; if(item.type === 'image') icon = 'fa-image text-blue-500'; if(item.type === 'video') icon = 'fa-video text-purple-500'; if(item.type === 'audio') icon = 'fa-music text-green-500';
+                    li.innerHTML = `<div class="flex items-center w-full truncate pr-4"><i class="fas fa-bars text-gray-300 mr-3"></i><div class="w-8 h-8 rounded bg-white border flex items-center justify-center mr-3 shrink-0"><i class="fas ${icon}"></i></div><div class="flex flex-col truncate"><span class="text-sm font-medium text-gray-700 truncate">${item.name}</span><span class="text-xs text-gray-400">${item.size}</span></div></div><button onclick="app.removeComboItem(${index})" class="text-gray-400 hover:text-red-500 shrink-0"><i class="fas fa-times-circle text-lg"></i></button>`;
                     list.appendChild(li);
                 });
             },
-
             saveCombo() {
-                const title = document.getElementById('combo-title').value.trim();
-                const text = document.getElementById('combo-text').value.trim();
-                const size = document.getElementById('combo-size').value;
-                const color = document.getElementById('combo-color').value;
-                
-                if(!title && !text && this.state.comboDraft.items.length === 0) {
-                    return alert('组合不能为空，请补充文字或资产');
-                }
-
-                this.state.comboDraft.title = title;
-                this.state.comboDraft.text = text;
-                this.state.comboDraft.size = size;
-                this.state.comboDraft.color = color;
-                
-                // 深拷贝防止引用污染
-                this.addBlockToState('combo', JSON.parse(JSON.stringify(this.state.comboDraft)));
-                this.closeComboEditor();
+                const title = document.getElementById('combo-title').value.trim(); const text = document.getElementById('combo-text').value.trim();
+                if(!title && !text && this.state.comboDraft.items.length === 0) return alert('组合不能为空，请补充文字或资产');
+                this.state.comboDraft.title = title; this.state.comboDraft.text = text; this.state.comboDraft.size = document.getElementById('combo-size').value; this.state.comboDraft.color = document.getElementById('combo-color').value;
+                this.addBlockToState('combo', JSON.parse(JSON.stringify(this.state.comboDraft))); this.closeComboEditor();
             },
 
-            // 基础 UI 与常规上传逻辑
-            setMode(mode) {
-                this.state.currentMode = mode;
-                this.updateNavUI();
-                this.renderInputArea();
-            },
+            setMode(mode) { this.state.currentMode = mode; this.updateNavUI(); this.renderInputArea(); },
             updateNavUI() {
                 document.querySelectorAll('.nav-btn').forEach(btn => {
                     btn.classList.remove('ring-2', 'ring-primary/20', 'bg-blue-50');
@@ -455,16 +434,13 @@
             },
             renderInputArea() {
                 if (!this.state.isAdmin && this.state.currentMode === 'uploaded') return;
-                const area = document.getElementById('dynamic-input-area');
-                const mode = this.state.currentMode;
-                const cfg = this.configs[mode];
-
+                const area = document.getElementById('dynamic-input-area'); const mode = this.state.currentMode; const cfg = this.configs[mode];
                 if (mode === 'text' || mode === 'url') {
                     area.innerHTML = `<textarea id="input-data" class="w-full h-24 p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-primary/50 transition-all text-gray-700"></textarea>`;
                 } else if (mode === 'form') {
                     area.innerHTML = `<input type="text" id="form-title" class="w-full p-2 rounded bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-primary/50 text-sm" placeholder="表单标题 (例如：意向客户登记)">`;
                 } else if (mode === 'uploaded') {
-                    area.innerHTML = `<div class="w-full max-h-60 overflow-y-auto no-scrollbar"><p class="text-sm text-gray-500 mb-2 border-b pb-2">当前云端全部数据对象扫描结果：</p><ul class="flex flex-col gap-2">${this.state.blocks.map(b => `<li class="bg-gray-50 p-2 rounded text-sm border flex justify-between"><span class="truncate w-4/5">${b.type==='text'||b.type==='url' ? b.content.substring(0,20)+'...' : (b.type==='combo' ? '[全能组合] '+b.content.title : b.content.name)}</span><span class="text-xs bg-gray-200 rounded px-2 text-gray-600">${b.type}</span></li>`).join('')}</ul></div>`;
+                    area.innerHTML = `<div class="w-full max-h-60 overflow-y-auto no-scrollbar"><ul class="flex flex-col gap-2">${this.state.blocks.map(b => `<li class="bg-gray-50 p-2 rounded text-sm border flex justify-between"><span class="truncate w-4/5">${b.type==='text'||b.type==='url' ? b.content.substring(0,20)+'...' : (b.type==='combo' ? '[组合] '+b.content.title : b.content.name)}</span><span class="text-xs bg-gray-200 rounded px-2 text-gray-600">${b.type}</span></li>`).join('')}</ul></div>`;
                 } else {
                     area.innerHTML = `<div id="upload-drop-ui" class="relative w-full h-24 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center hover:bg-gray-100 hover:border-primary transition-all"><input type="file" accept="${cfg.accept}" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="app.handleMainFileSelect(event)"><i class="fas fa-cloud-upload-alt text-2xl text-gray-400 mb-1"></i><p class="text-sm text-gray-500">点击或直接拖拽文件</p></div><div id="upload-progress-ui" class="hidden w-full h-24 bg-blue-50 rounded-xl border-2 border-primary flex items-center justify-center"><i class="fas fa-spinner fa-spin text-2xl text-primary mr-2"></i><span id="upload-status-text" class="text-primary font-medium text-sm">上传中...</span></div>`;
                 }
@@ -473,54 +449,29 @@
                 if (!this.state.isAdmin) return;
                 const files = event.target.files || event.dataTransfer.files;
                 if (!files || files.length === 0) return;
-                
-                document.getElementById('upload-drop-ui').classList.add('hidden');
-                document.getElementById('upload-progress-ui').classList.remove('hidden');
-
+                document.getElementById('upload-drop-ui').classList.add('hidden'); document.getElementById('upload-progress-ui').classList.remove('hidden');
                 for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    document.getElementById('upload-status-text').innerText = `正在处理: ${file.name}`;
-                    const uploadResult = await this.uploadFileToBackend(file);
-                    
+                    const uploadResult = await this.uploadFileToBackend(files[i]);
                     if (uploadResult && uploadResult.success) {
                         let type = 'document';
-                        if (file.type.startsWith('image/')) type = 'image';
-                        else if (file.type.startsWith('audio/')) type = 'audio';
-                        else if (file.type.startsWith('video/')) type = 'video';
-                        
+                        if (files[i].type.startsWith('image/')) type = 'image'; else if (files[i].type.startsWith('audio/')) type = 'audio'; else if (files[i].type.startsWith('video/')) type = 'video';
                         this.addBlockToState(type, { url: uploadResult.url, name: uploadResult.name, size: (uploadResult.size/1024/1024).toFixed(2) + ' MB' });
                     }
                 }
-                document.getElementById('upload-drop-ui').classList.remove('hidden');
-                document.getElementById('upload-progress-ui').classList.add('hidden');
+                document.getElementById('upload-drop-ui').classList.remove('hidden'); document.getElementById('upload-progress-ui').classList.add('hidden');
             },
             bindDragAndDrop() {
-                const dropZone = document.getElementById('drop-zone');
-                const panel = document.getElementById('input-panel');
-                const comboModal = document.getElementById('combo-editor-modal');
-                
+                const dropZone = document.getElementById('drop-zone'); const panel = document.getElementById('input-panel'); const comboModal = document.getElementById('combo-editor-modal');
                 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, e => {
-                        // 阻止浏览器默认打开文件的行为
-                        e.preventDefault(); e.stopPropagation();
-                    }, false);
-                    comboModal.addEventListener(eventName, e => {
-                        e.preventDefault(); e.stopPropagation();
-                    }, false);
+                    dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
+                    comboModal.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
                 });
-
-                // 只在未打开全屏组合编辑器，且拥有管理权限时触发主界面高亮
                 dropZone.addEventListener('dragenter', () => { if(this.state.isAdmin && comboModal.classList.contains('hidden')) panel.classList.add('drag-active'); }, false);
                 dropZone.addEventListener('dragleave', () => panel.classList.remove('drag-active'), false);
                 dropZone.addEventListener('drop', (e) => {
                     panel.classList.remove('drag-active');
                     if(this.state.isAdmin && e.dataTransfer.files.length > 0) {
-                        // 如果在组合面板中，转交给 Combo 解析；如果在主界面，走主线逻辑
-                        if (!comboModal.classList.contains('hidden')) {
-                            this.handleComboFileSelect(e);
-                        } else {
-                            this.handleMainFileSelect(e);
-                        }
+                        if (!comboModal.classList.contains('hidden')) this.handleComboFileSelect(e); else this.handleMainFileSelect(e);
                     }
                 }, false);
             },
@@ -537,120 +488,104 @@
             },
             addBlockToState(type, content) {
                 this.state.blocks.push({ id: 'block_' + Date.now(), type: type, content: content });
-                this.renderBlocks();
-                if (this.state.currentMode === 'uploaded') this.renderInputArea();
+                this.renderBlocks(); if (this.state.currentMode === 'uploaded') this.renderInputArea();
             },
             removeBlock(id) {
                 if (!this.state.isAdmin) return;
                 const target = this.state.blocks.find(b => b.id === id);
                 if (target) {
-                    // 全能智能清空：识别子属性内的多媒体并直接摧毁物理缓存
-                    if (target.type === 'combo' && target.content.items) {
-                        target.content.items.forEach(item => this.deleteCloudFile(item.url));
-                    } else if (target.content.url) {
-                        this.deleteCloudFile(target.content.url);
-                    }
+                    if (target.type === 'combo' && target.content.items) target.content.items.forEach(item => this.deleteCloudFile(item.url));
+                    else if (target.content.url) this.deleteCloudFile(target.content.url);
                 }
                 this.state.blocks = this.state.blocks.filter(b => b.id !== id);
-                this.renderBlocks();
-                if (this.state.currentMode === 'uploaded') this.renderInputArea();
+                this.renderBlocks(); if (this.state.currentMode === 'uploaded') this.renderInputArea();
             },
 
-            // 文档渲染模块
             escapeHtml(unsafe) { return unsafe.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); },
             openDocumentPreview(url, name) {
                 const ext = name.split('.').pop().toLowerCase();
                 const absoluteUrl = url.startsWith('http') ? url : (window.location.origin + url);
                 const contentBox = document.getElementById('preview-content');
                 document.getElementById('preview-modal').classList.remove('hidden');
-
-                if (ext === 'pdf') contentBox.innerHTML = `<iframe src="${url}" class="w-full h-full border-none"></iframe>`;
-                else if (['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) contentBox.innerHTML = `<iframe src="https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(absoluteUrl)}" class="w-full h-full border-none"></iframe>`;
-                else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) contentBox.innerHTML = `<img src="${url}" class="max-w-full max-h-full object-contain">`;
-                else if (['mp4', 'webm', 'ogg'].includes(ext)) contentBox.innerHTML = `<video src="${url}" controls autoplay class="max-w-full max-h-full"></video>`;
-                else contentBox.innerHTML = `<div class="text-center"><i class="fas fa-file text-6xl text-gray-300 mb-4"></i><p class="text-gray-600 mb-4">不支持在浏览器直接预览</p><a href="${url}" download class="bg-primary text-white px-6 py-2 rounded-full">下载到本地</a></div>`;
+                
+                let inner = '';
+                if (ext === 'pdf') inner = `<iframe src="${url}" class="w-full h-full border-none"></iframe>`;
+                else if (['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) inner = `<iframe src="https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(absoluteUrl)}" class="w-full h-full border-none bg-white"></iframe>`;
+                else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) inner = `<img src="${url}" class="max-w-full max-h-full object-contain">`;
+                else if (['mp4', 'webm', 'ogg'].includes(ext)) inner = `<video src="${url}" controls autoplay class="max-w-full max-h-full"></video>`;
+                else inner = `<div class="text-center bg-white p-12 rounded-xl"><i class="fas fa-file text-6xl text-gray-300 mb-4"></i><p class="text-gray-600 mb-4">不支持在浏览器直接预览</p><a href="${url}" download class="bg-primary text-white px-6 py-2 rounded-full">直接下载</a></div>`;
+                
+                contentBox.innerHTML = inner;
             },
             closePreview() { document.getElementById('preview-modal').classList.add('hidden'); document.getElementById('preview-content').innerHTML = ''; },
 
-            // 流水线卡片生成算法 (支持 Combo 嵌套递归)
             generateBlockHtml(block, isLive = false) {
                 let html = '';
                 const baseClass = isLive ? 'w-full mb-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-100 overflow-hidden' : 'flex-1';
-                
-                // 处理全能组合模式渲染
                 if (block.type === 'combo') {
-                    const c = block.content;
-                    let comboInner = '';
+                    const c = block.content; let comboInner = '';
                     if(c.title) comboInner += `<h2 class="text-xl font-bold ${c.color} mb-3 leading-tight">${this.escapeHtml(c.title)}</h2>`;
                     if(c.text) comboInner += `<p class="${c.size} ${c.color} whitespace-pre-wrap leading-relaxed mb-4 opacity-90">${this.escapeHtml(c.text)}</p>`;
-                    
                     if(c.items && c.items.length > 0) {
                         comboInner += `<div class="flex flex-col gap-3 mt-4 border-t pt-4">`;
-                        c.items.forEach(item => {
-                            // 将单个 item 伪装成 block 交给渲染器
-                            comboInner += `<div class="rounded-xl overflow-hidden shadow-sm border border-gray-100 bg-gray-50/50">` + this.generateBlockHtml({type: item.type, content: item}, false) + `</div>`;
-                        });
+                        c.items.forEach(item => { comboInner += `<div class="rounded-xl overflow-hidden shadow-sm border border-gray-100 bg-gray-50/50">` + this.generateBlockHtml({type: item.type, content: item}, false) + `</div>`; });
                         comboInner += `</div>`;
                     }
-                    html = `<div class="${baseClass} bg-gradient-to-br from-white to-gray-50 border-blue-100 border relative"><div class="absolute top-0 left-0 w-1 h-full bg-primary rounded-l-2xl"></div>${comboInner}</div>`;
-                    return html;
+                    return `<div class="${baseClass} bg-gradient-to-br from-white to-gray-50 border-blue-100 border relative"><div class="absolute top-0 left-0 w-1 h-full bg-primary rounded-l-2xl"></div>${comboInner}</div>`;
                 }
 
-                // 常规原子卡片
                 switch (block.type) {
                     case 'text': html = `<div class="${baseClass}"><p class="text-gray-700 whitespace-pre-wrap">${this.escapeHtml(block.content)}</p></div>`; break;
                     case 'url': html = `<div class="${baseClass}"><a href="${this.escapeHtml(block.content)}" target="_blank" class="text-blue-500 underline flex items-center break-all"><i class="fas fa-external-link-alt mr-2 shrink-0"></i> ${this.escapeHtml(block.content)}</a></div>`; break;
                     case 'image': html = `<div class="${baseClass} p-1"><img src="${block.content.url}" class="w-full rounded-lg cursor-pointer hover:opacity-90 transition-all shadow-sm" onclick="app.openDocumentPreview('${block.content.url}', '${block.content.name}')"></div>`; break;
                     case 'audio': html = `<div class="${baseClass} flex flex-col p-3"><span class="text-sm font-medium text-gray-700 mb-2 truncate px-2"><i class="fas fa-music text-green-500 mr-2"></i>${block.content.name}</span><audio controls src="${block.content.url}" class="w-full outline-none h-10 rounded-full bg-gray-100"></audio></div>`; break;
                     case 'video': html = `<div class="${baseClass} bg-black flex justify-center p-0 m-0"><video src="${block.content.url}" controls class="w-full max-h-[300px] object-contain"></video></div>`; break;
-                    case 'document': html = `<div class="${baseClass} flex items-center bg-white p-3"><div class="w-12 h-12 bg-red-50 text-red-500 rounded-lg flex items-center justify-center mr-3 shrink-0"><i class="fas fa-file-pdf text-2xl"></i></div><div class="flex flex-col flex-1 overflow-hidden mr-2"><span class="text-sm font-semibold text-gray-800 truncate">${block.content.name}</span><span class="text-xs text-gray-400 mt-0.5">${block.content.size} · PPT/Word等支持在线预览</span></div><div class="flex flex-col gap-1 shrink-0"><button onclick="app.openDocumentPreview('${block.content.url}', '${block.content.name}')" class="text-xs bg-gray-100 px-3 py-1 rounded text-gray-700 hover:bg-gray-200">全屏查看</button><a href="${block.content.url}" download class="text-xs bg-primary text-white px-3 py-1 rounded hover:bg-blue-600 text-center"><i class="fas fa-download mr-1"></i>下载</a></div></div>`; break;
-                    case 'form': html = `<div class="${baseClass} border-2 border-dashed border-indigo-100 bg-indigo-50/40 p-5"><h4 class="font-bold text-indigo-900 mb-4 text-center text-lg">${this.escapeHtml(block.content.title)}</h4><input type="text" placeholder="您的姓名" class="w-full p-2.5 mb-3 border border-white rounded shadow-sm outline-none text-sm"><input type="tel" placeholder="联系方式" class="w-full p-2.5 mb-3 border border-white rounded shadow-sm outline-none text-sm"><button class="w-full bg-indigo-500 text-white py-2.5 rounded shadow-md hover:bg-indigo-600 transition-all font-medium mt-2">确认提交登记</button></div>`; break;
+                    case 'document': html = `<div class="${baseClass} flex items-center bg-white p-3"><div class="w-12 h-12 bg-red-50 text-red-500 rounded-lg flex items-center justify-center mr-3 shrink-0"><i class="fas fa-file-pdf text-2xl"></i></div><div class="flex flex-col flex-1 overflow-hidden mr-2"><span class="text-sm font-semibold text-gray-800 truncate">${block.content.name}</span><span class="text-xs text-gray-400 mt-0.5">${block.content.size} · 点击预览</span></div><div class="flex flex-col gap-1 shrink-0"><button onclick="app.openDocumentPreview('${block.content.url}', '${block.content.name}')" class="text-xs bg-gray-100 px-3 py-1 rounded text-gray-700 hover:bg-gray-200">全屏查看</button><a href="${block.content.url}" download class="text-xs bg-primary text-white px-3 py-1 rounded hover:bg-blue-600 text-center"><i class="fas fa-download mr-1"></i>单选下载</a></div></div>`; break;
+                    case 'form': html = `<div class="${baseClass} border-2 border-dashed border-indigo-100 bg-indigo-50/40 p-5"><h4 class="font-bold text-indigo-900 mb-4 text-center text-lg">${this.escapeHtml(block.content.title)}</h4><input type="text" placeholder="您的姓名" class="w-full p-2.5 mb-3 border border-white rounded shadow-sm outline-none text-sm"><input type="tel" placeholder="联系方式" class="w-full p-2.5 mb-3 border border-white rounded shadow-sm outline-none text-sm"><button class="w-full bg-indigo-500 text-white py-2.5 rounded shadow-md hover:bg-indigo-600 transition-all font-medium mt-2">确认提交</button></div>`; break;
                 }
                 return html;
             },
 
             renderBlocks() {
                 const container = document.getElementById('blocks-container');
-                const empty = document.getElementById('empty-state') || document.createElement('div');
-                if(!document.getElementById('empty-state')){
-                    empty.id = 'empty-state'; empty.className = 'flex flex-col items-center justify-center h-40 text-gray-400';
-                    empty.innerHTML = `<i class="fas fa-layer-group text-4xl mb-3 opacity-50"></i><p class="text-sm">内容流为空，等待管理员拼装</p>`;
-                }
-                
                 if (!container) return;
-                
                 if (this.state.blocks.length === 0) {
-                    container.innerHTML = ''; container.appendChild(empty); empty.style.display = 'flex'; return;
+                    container.innerHTML = `<div class="flex flex-col items-center justify-center h-40 text-gray-400"><i class="fas fa-layer-group text-4xl mb-3 opacity-50"></i><p class="text-sm">内容流为空，等待管理员拼装</p></div>`; return;
                 }
-
-                empty.style.display = 'none'; container.innerHTML = '';
-                
+                container.innerHTML = '';
                 this.state.blocks.forEach((block) => {
                     const blockEl = document.createElement('div');
                     blockEl.className = 'block-animate bg-white border border-gray-100 rounded-xl p-3 flex items-center justify-between group relative shadow-sm hover:shadow-md transition-all';
-                    const contentHtml = this.generateBlockHtml(block, false);
-
-                    blockEl.innerHTML = `<div class="flex items-center w-full overflow-hidden"><div class="mr-3 text-gray-300 admin-only shrink-0"><i class="fas fa-ellipsis-v"></i></div>${contentHtml}</div><button onclick="app.removeBlock('${block.id}')" class="admin-only w-8 h-8 rounded-full bg-red-50 text-red-500 items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white absolute right-4 shadow-md shrink-0"><i class="fas fa-trash-alt text-sm"></i></button>`;
+                    blockEl.innerHTML = `<div class="flex items-center w-full overflow-hidden"><div class="mr-3 text-gray-300 shrink-0"><i class="fas fa-ellipsis-v"></i></div>${this.generateBlockHtml(block, false)}</div><button onclick="app.removeBlock('${block.id}')" class="w-8 h-8 rounded-full bg-red-50 text-red-500 items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white absolute right-4 shadow-md shrink-0"><i class="fas fa-trash-alt text-sm"></i></button>`;
                     container.appendChild(blockEl);
                 });
             },
 
             renderLiveH5() {
-                document.title = "扫码呈现内容";
+                document.title = "在线查阅系统";
                 const container = document.getElementById('mobile-live-container');
                 if (this.state.blocks.length === 0) {
                     container.innerHTML = '<div class="text-center mt-32 text-gray-400 flex flex-col items-center"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><i class="fas fa-box-open text-3xl"></i></div><p class="font-medium">内容未发布或已下线</p></div>';
                     return;
                 }
                 let html = '<div class="w-full flex justify-center py-4"><div class="w-12 h-1 bg-gray-300 rounded-full"></div></div>';
+                html += '<div class="px-4">';
                 this.state.blocks.forEach(block => { html += this.generateBlockHtml(block, true); });
-                html += '<p class="text-center text-xs text-gray-300 mt-10 mb-8 tracking-widest uppercase">END</p>';
+                html += '</div>';
+                
+                // 【核心：悬浮的一键批量下载按钮】
+                html += `
+                    <div class="fixed bottom-0 left-0 w-full p-4 bg-white/80 backdrop-blur-md border-t border-gray-200 z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+                        <button id="btn-batch-download" onclick="app.downloadAllFiles()" class="w-full max-w-lg mx-auto bg-primary text-white py-3.5 rounded-xl shadow-lg hover:bg-blue-600 transition-all font-semibold flex items-center justify-center text-[15px]">
+                            <i class="fas fa-cloud-download-alt mr-2 text-lg"></i> 一键打包下载全部内容
+                        </button>
+                    </div>
+                `;
                 container.innerHTML = html;
             },
 
             renderQR() {
-                const qrContainer = document.getElementById('qrcode');
-                qrContainer.innerHTML = '';
+                const qrContainer = document.getElementById('qrcode'); qrContainer.innerHTML = '';
                 new QRCode(qrContainer, { text: this.state.liveUrl, width: 200, height: 200, colorDark : "#111827", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.M });
                 setTimeout(() => { const canvas = qrContainer.querySelector('canvas'); if(canvas) { canvas.style.borderRadius = '0.75rem'; canvas.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)'; } }, 50);
             },
