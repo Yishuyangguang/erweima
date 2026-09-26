@@ -34,36 +34,20 @@
             background-color: #F8FAFC; 
             color: #333; 
         }
-        .no-scrollbar::-webkit-scrollbar { 
-            display: none; 
-        }
-        .no-scrollbar { 
-            -ms-overflow-style: none; 
-            scrollbar-width: none; 
-        }
-        .drag-active { 
-            border-color: #1E90FF !important; 
-            background-color: #EBF5FF !important; 
-        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .drag-active { border-color: #1E90FF !important; background-color: #EBF5FF !important; }
         
         @keyframes slideIn { 
             from { opacity: 0; transform: translateY(10px); } 
             to { opacity: 1; transform: translateY(0); } 
         }
-        .block-animate { 
-            animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; 
-        }
+        .block-animate { animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
         
         /* 管理员权限样式隔离 */
-        .admin-only { 
-            display: none !important; 
-        }
-        body.is-admin .admin-only { 
-            display: flex !important; 
-        }
-        body.is-admin .admin-only-block { 
-            display: block !important; 
-        }
+        .admin-only { display: none !important; }
+        body.is-admin .admin-only { display: flex !important; }
+        body.is-admin .admin-only-block { display: block !important; }
         
         /* 拖拽排序特效 */
         .sortable-ghost { 
@@ -73,9 +57,7 @@
         }
         
         /* 移动端 H5 底部安全区，防止被悬浮按钮遮挡 */
-        .pb-safe { 
-            padding-bottom: calc(env(safe-area-inset-bottom) + 100px); 
-        }
+        .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom) + 100px); }
 
         /* 富文本编辑器内部基础排版适配 */
         .rich-text-content b { font-weight: bold; }
@@ -104,9 +86,11 @@
         </button>
     </header>
 
-    <!-- PC端管理工作区 -->
-    <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-3 gap-6 admin-only">
-        <section class="lg:col-span-2 flex flex-col gap-4 relative">
+    <!-- PC端管理工作区 (将 lg:grid-cols-3 改为 lg:grid-cols-4 以扩大左侧任务框比例) -->
+    <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-4 gap-6 admin-only">
+        
+        <!-- 左侧编辑/任务区域占据 3/4 空间 -->
+        <section class="lg:col-span-3 flex flex-col gap-4 relative">
             <div id="input-panel" class="bg-white rounded-2xl shadow-soft p-6 relative border-2 border-dashed border-transparent transition-all">
                 <div class="flex justify-between items-center mb-4">
                     <h2 id="panel-title" class="text-lg font-semibold text-gray-700">
@@ -134,16 +118,34 @@
             </div>
         </section>
 
-        <aside class="w-full flex flex-col gap-4 relative">
-            <div class="bg-white rounded-2xl shadow-soft p-8 flex flex-col items-center sticky top-8">
-                <div id="qrcode-container" class="w-56 h-56 bg-gray-50 flex items-center justify-center rounded-2xl mb-6 relative overflow-hidden transition-all shadow-inner mt-4">
+        <!-- 右侧二维码区域占据 1/4 空间，体积缩小更加精致 -->
+        <aside class="w-full flex flex-col gap-4 relative lg:col-span-1">
+            <div class="bg-white rounded-2xl shadow-soft p-6 flex flex-col items-center sticky top-8">
+                
+                <!-- 缩小的二维码容器 -->
+                <div id="qrcode-container" class="w-48 h-48 bg-gray-50 flex items-center justify-center rounded-2xl mb-5 relative overflow-hidden transition-all shadow-inner mt-2">
                     <div id="qrcode" class="z-10 relative"></div>
                 </div>
-                <p class="text-sm text-gray-500 mb-6 text-center">此处扫描活码进入 H5 页面<br><span class="text-xs text-gray-400">(内容修改自动同步，图案永久不变)</span></p>
-                <div class="flex gap-3 w-full">
-                    <button onclick="app.generateShareLink()" class="flex-1 bg-primary text-white px-4 py-2 rounded-full hover:bg-blue-600 shadow transition-all font-medium flex items-center justify-center">
+                
+                <p class="text-sm text-gray-500 mb-6 text-center leading-relaxed">
+                    此处扫描活码进入 H5 页面<br>
+                    <span class="text-xs text-gray-400">(内容修改自动同步，图案永久不变)</span>
+                </p>
+                
+                <!-- 二维码功能矩阵操作区 -->
+                <div class="flex flex-col gap-3 w-full">
+                    <button onclick="app.generateShareLink()" class="w-full bg-primary text-white px-4 py-2.5 rounded-xl hover:bg-blue-600 shadow-md transition-all font-medium flex items-center justify-center">
                         <i class="fas fa-share-nodes mr-2"></i> 复制专属链接
                     </button>
+                    
+                    <div class="flex gap-2 w-full">
+                        <button onclick="app.downloadQR()" class="flex-1 bg-white border border-gray-200 text-gray-700 px-2 py-2 rounded-xl hover:bg-gray-50 shadow-sm transition-all text-sm font-medium flex items-center justify-center">
+                            <i class="fas fa-download mr-1.5"></i> 下载
+                        </button>
+                        <button onclick="app.openBeautifyModal()" class="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-2 rounded-xl hover:shadow-md hover:-translate-y-0.5 transition-all text-sm font-medium flex items-center justify-center">
+                            <i class="fas fa-magic mr-1.5"></i> 美化
+                        </button>
+                    </div>
                 </div>
             </div>
         </aside>
@@ -259,6 +261,31 @@
         </div>
     </div>
 
+    <!-- 二维码美化弹窗 -->
+    <div id="beautify-modal" class="fixed inset-0 bg-black/60 z-[200] hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-2xl p-6 w-80 shadow-2xl transform transition-all relative">
+            <button onclick="app.closeBeautifyModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <h3 class="text-xl font-bold mb-6 text-gray-800"><i class="fas fa-magic text-purple-500 mr-2"></i>二维码美化</h3>
+            
+            <div class="space-y-4 mb-6">
+                <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <span class="text-sm font-medium text-gray-700">图案颜色 (前景色)</span>
+                    <input type="color" id="qr-color-dark" class="w-9 h-9 rounded border-none cursor-pointer bg-transparent">
+                </div>
+                <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <span class="text-sm font-medium text-gray-700">背景颜色</span>
+                    <input type="color" id="qr-color-light" class="w-9 h-9 rounded border-none cursor-pointer bg-transparent">
+                </div>
+            </div>
+            
+            <button onclick="app.applyBeautify()" class="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg transition-all font-medium text-base">
+                应用美化方案
+            </button>
+        </div>
+    </div>
+
     <!-- 文档与多媒体全屏预览弹窗 -->
     <div id="preview-modal" class="fixed inset-0 bg-black/85 z-[250] hidden flex flex-col items-center justify-center backdrop-blur-sm">
         <div class="absolute top-4 right-4">
@@ -280,7 +307,9 @@
                 liveUrl: window.location.origin + window.location.pathname + '?view=live',
                 comboDraft: { title: '', text: '', items: [] },
                 draggedItemIndex: null,
-                isLiveMode: false
+                isLiveMode: false,
+                // 二维码全局配色状态
+                qrConfig: { dark: '#111827', light: '#ffffff' }
             },
 
             configs: {
@@ -1151,26 +1180,61 @@
                 container.innerHTML = html;
             },
 
+            // ================= 二维码生成与美化引擎 =================
             renderQR() {
                 const qrContainer = document.getElementById('qrcode'); 
+                
+                // 核心修复：重绘前彻底清空 Canvas 防止内存溢出与重叠
                 qrContainer.innerHTML = '';
                 
                 new QRCode(qrContainer, { 
                     text: this.state.liveUrl, 
-                    width: 200, 
-                    height: 200, 
-                    colorDark : "#111827", 
-                    colorLight : "#ffffff", 
+                    width: 180, // 对应版面栅格缩小调整
+                    height: 180, 
+                    colorDark : this.state.qrConfig.dark, 
+                    colorLight : this.state.qrConfig.light, 
                     correctLevel : QRCode.CorrectLevel.M 
                 });
                 
                 setTimeout(() => { 
                     const canvas = qrContainer.querySelector('canvas'); 
                     if(canvas) { 
-                        canvas.style.borderRadius = '0.75rem'; 
+                        canvas.style.borderRadius = '0.5rem'; 
                         canvas.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)'; 
                     } 
                 }, 50);
+            },
+            
+            downloadQR() {
+                const canvas = document.querySelector('#qrcode canvas');
+                if(!canvas) return alert('二维码尚未生成');
+                
+                const url = canvas.toDataURL("image/png");
+                const a = document.createElement('a');
+                a.download = `专属活码_${new Date().getTime()}.png`;
+                a.href = url;
+                a.click();
+            },
+
+            openBeautifyModal() {
+                document.getElementById('qr-color-dark').value = this.state.qrConfig.dark;
+                document.getElementById('qr-color-light').value = this.state.qrConfig.light;
+                
+                document.getElementById('beautify-modal').classList.remove('hidden');
+                document.getElementById('beautify-modal').classList.add('flex');
+            },
+            
+            closeBeautifyModal() {
+                document.getElementById('beautify-modal').classList.add('hidden');
+                document.getElementById('beautify-modal').classList.remove('flex');
+            },
+            
+            applyBeautify() {
+                this.state.qrConfig.dark = document.getElementById('qr-color-dark').value;
+                this.state.qrConfig.light = document.getElementById('qr-color-light').value;
+                
+                this.renderQR();
+                this.closeBeautifyModal();
             },
             
             generateShareLink() {
