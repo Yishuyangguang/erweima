@@ -15,15 +15,14 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
-    // 极简鉴权中间件：验证请求头中的口令
+    // 鉴权中间件
     const checkAuth = (req) => {
       const auth = req.headers.get('Authorization');
-      // 默认密码为 admin123，您可以在 CF 环境变量中设置 ADMIN_PWD 覆盖
       const validPwd = env.ADMIN_PWD || 'admin123';
       return auth === `Bearer ${validPwd}`;
     };
 
-    // 1. 管理员登录验证接口
+    // 1. 管理员登录验证
     if (path === '/api/auth' && method === 'POST') {
       try {
         const body = await request.json();
@@ -48,10 +47,8 @@ export default {
       const file = formData.get('file');
       if (!file) return new Response('No file provided', { status: 400, headers: corsHeaders });
       
-      // 生成防冲突的唯一文件名
       const fileId = Date.now() + '_' + Math.random().toString(36).substring(2, 8) + '_' + file.name;
       
-      // 写入 R2 储存桶
       await env.BUCKET.put(fileId, file.stream(), {
         httpMetadata: { contentType: file.type }
       });
@@ -67,7 +64,25 @@ export default {
       });
     }
 
-    // 3. 全局配置文件读写接口 (保存在 R2 中的 site_config.json)
+    // 3. 垃圾清理接口 (从 R2 删除缓存文件)
+    if (path === '/api/file' && method === 'DELETE') {
+      if (!checkAuth(request)) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
+      try {
+        const body = await request.json();
+        const fileUrl = body.url; 
+        if (fileUrl && fileUrl.startsWith('/r2/')) {
+          const key = decodeURIComponent(fileUrl.substring(4));
+          await env.BUCKET.delete(key);
+        }
+        return new Response(JSON.stringify({ success: true, message: '缓存已自动清理' }), { 
+          status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        });
+      } catch (e) {
+        return new Response('Bad Request', { status: 400, headers: corsHeaders });
+      }
+    }
+
+    // 4. 全局配置文件读写
     if (path === '/api/config') {
       if (method === 'GET') {
         const obj = await env.BUCKET.get('site_config.json');
@@ -87,7 +102,7 @@ export default {
       }
     }
 
-    // 4. 读取 R2 媒体与文件接口
+    // 5. 媒体流读取
     if (path.startsWith('/r2/')) {
       const key = decodeURIComponent(path.substring(4));
       const obj = await env.BUCKET.get(key);
@@ -99,7 +114,6 @@ export default {
       return new Response(obj.body, { headers: responseHeaders });
     }
 
-    // 兜底：如果是页面请求，交还给 CF Pages 托管的静态文件 (如 index.html)
     return env.ASSETS.fetch(request);
   }
 };
