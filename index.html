@@ -86,17 +86,16 @@
         </button>
     </header>
 
-    <!-- PC端管理工作区 (将 lg:grid-cols-3 改为 lg:grid-cols-4 以扩大左侧任务框比例) -->
+    <!-- PC端管理工作区 -->
     <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-4 gap-6 admin-only">
         
-        <!-- 左侧编辑/任务区域占据 3/4 空间 -->
         <section class="lg:col-span-3 flex flex-col gap-4 relative">
             <div id="input-panel" class="bg-white rounded-2xl shadow-soft p-6 relative border-2 border-dashed border-transparent transition-all">
                 <div class="flex justify-between items-center mb-4">
                     <h2 id="panel-title" class="text-lg font-semibold text-gray-700">
                         <i class="fas fa-keyboard text-primary mr-2"></i>添加文本
                     </h2>
-                    <span class="text-xs text-gray-400">支持直接拖拽资源</span>
+                    <span class="text-xs text-gray-400">支持直接拖拽资源极速上传</span>
                 </div>
                 
                 <div id="dynamic-input-area" class="w-full min-h-[120px]"></div>
@@ -118,11 +117,9 @@
             </div>
         </section>
 
-        <!-- 右侧二维码区域占据 1/4 空间，体积缩小更加精致 -->
         <aside class="w-full flex flex-col gap-4 relative lg:col-span-1">
             <div class="bg-white rounded-2xl shadow-soft p-6 flex flex-col items-center sticky top-8">
                 
-                <!-- 缩小的二维码容器 -->
                 <div id="qrcode-container" class="w-48 h-48 bg-gray-50 flex items-center justify-center rounded-2xl mb-5 relative overflow-hidden transition-all shadow-inner mt-2">
                     <div id="qrcode" class="z-10 relative"></div>
                 </div>
@@ -132,7 +129,6 @@
                     <span class="text-xs text-gray-400">(内容修改自动同步，图案永久不变)</span>
                 </p>
                 
-                <!-- 二维码功能矩阵操作区 -->
                 <div class="flex flex-col gap-3 w-full">
                     <button onclick="app.generateShareLink()" class="w-full bg-primary text-white px-4 py-2.5 rounded-xl hover:bg-blue-600 shadow-md transition-all font-medium flex items-center justify-center">
                         <i class="fas fa-share-nodes mr-2"></i> 复制专属链接
@@ -154,7 +150,7 @@
     <!-- H5 游客实时预览容器 (扫码直接进入此界面) -->
     <div id="mobile-live-container" class="hidden w-full max-w-lg mx-auto bg-gray-50 min-h-screen pb-safe"></div>
 
-    <!-- 全屏图文组合编辑器 (已升级为富文本引擎) -->
+    <!-- 全屏图文组合编辑器 -->
     <div id="combo-editor-modal" class="fixed inset-0 bg-gray-100 z-[150] hidden flex-col">
         <div class="h-16 bg-white shadow-sm flex items-center justify-between px-6 border-b shrink-0">
             <h2 class="text-lg font-bold text-gray-800">
@@ -173,7 +169,6 @@
                     <input type="text" id="combo-title" placeholder="输入大标题 (选填)" class="w-full text-2xl font-bold border-none outline-none placeholder-gray-300 focus:ring-0 px-1">
                 </div>
                 
-                <!-- 全新富文本编辑器工具栏 (Toolbar) -->
                 <div class="flex flex-col">
                     <div class="flex flex-wrap gap-2 items-center bg-gray-50 p-2.5 rounded-t-lg border border-b-0 border-gray-200">
                         
@@ -226,7 +221,7 @@
                     <div id="combo-drop-zone" class="relative w-full h-24 bg-blue-50/50 rounded-xl border-2 border-dashed border-blue-200 flex flex-col items-center justify-center hover:bg-blue-50 transition-all group">
                         <input type="file" id="combo-file-input" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="app.handleComboFileSelect(event)">
                         <i class="fas fa-plus-circle text-2xl text-blue-300 group-hover:text-primary transition-colors mb-1"></i>
-                        <p class="text-sm text-gray-500">点击或将<span class="font-semibold text-primary"> 图片/音视频/PPT/文档 </span>拖拽至此添加到组合</p>
+                        <p class="text-sm text-gray-500">点击或将<span class="font-semibold text-primary"> 图片/音视频/PPT/文档 </span>拖拽至此极速上传到组合</p>
                     </div>
                 </div>
             </div>
@@ -308,7 +303,6 @@
                 comboDraft: { title: '', text: '', items: [] },
                 draggedItemIndex: null,
                 isLiveMode: false,
-                // 二维码全局配色状态
                 qrConfig: { dark: '#111827', light: '#ffffff' }
             },
 
@@ -447,28 +441,54 @@
                 }
             },
             
-            async uploadFileToBackend(file) {
-                if (!this.state.isAdmin) return null;
-                const formData = new FormData(); 
-                formData.append('file', file);
+            // ================= 极速并发上传核心架构 =================
+            // 暴露原生的 Promise 包装供并发引擎调用
+            async uploadFilesConcurrent(files, progressCallback) {
+                if (!this.state.isAdmin) return [];
                 
-                try {
-                    const res = await fetch('/api/upload', { 
-                        method: 'POST', 
-                        headers: { 'Authorization': `Bearer ${this.state.token}` }, 
-                        body: formData 
+                const totalSize = Array.from(files).reduce((sum, f) => sum + f.size, 0);
+                const loadedMap = new Map();
+                
+                const uploadPromises = Array.from(files).map(file => {
+                    return new Promise((resolve) => {
+                        const formData = new FormData(); 
+                        formData.append('file', file);
+                        
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', '/api/upload', true);
+                        xhr.setRequestHeader('Authorization', `Bearer ${this.state.token}`);
+                        
+                        xhr.upload.onprogress = (event) => {
+                            if (event.lengthComputable) {
+                                loadedMap.set(file.name, event.loaded);
+                                const currentLoaded = Array.from(loadedMap.values()).reduce((a, b) => a + b, 0);
+                                const percent = Math.floor((currentLoaded / totalSize) * 100);
+                                if (progressCallback) progressCallback(percent);
+                            }
+                        };
+                        
+                        xhr.onload = () => {
+                            if (xhr.status === 200) {
+                                try {
+                                    resolve({ file: file, data: JSON.parse(xhr.responseText) });
+                                } catch(e) {
+                                    resolve({ file: file, data: null });
+                                }
+                            } else {
+                                try {
+                                    const errData = JSON.parse(xhr.responseText);
+                                    alert(`上传失败: ${errData.message}`);
+                                } catch(e) {}
+                                resolve({ file: file, data: null });
+                            }
+                        };
+                        
+                        xhr.onerror = () => { resolve({ file: file, data: null }); };
+                        xhr.send(formData);
                     });
-                    
-                    const data = await res.json();
-                    if (!res.ok) {
-                        alert(`上传失败: ${data.message || '500 Server Error'}`);
-                        return null;
-                    }
-                    return data;
-                } catch (e) { 
-                    alert(`网络或跨域阻断异常: ${e.message}`);
-                    return null; 
-                }
+                });
+                
+                return await Promise.all(uploadPromises);
             },
             
             async deleteCloudFile(url) {
@@ -560,7 +580,7 @@
                 }, false);
             },
 
-            // ================= 游客端 一键打包下载 (ZIP) =================
+            // ================= 游客端 一键极速打包下载 (无损STORE算法) =================
             async downloadAllFiles() {
                 if (this.state.blocks.length === 0) {
                     return alert('当前页面没有任何内容可供下载。');
@@ -568,7 +588,7 @@
                 
                 const btn = document.getElementById('btn-batch-download');
                 if (btn) {
-                    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 资源抓取打包中，请稍候...';
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 极速预处理中...';
                 }
 
                 try {
@@ -580,8 +600,13 @@
                     
                     const tasks = [];
                     const namesTracker = {}; 
+                    
+                    // 计算需要提取的文件总数用于进度
+                    let totalTasks = 0;
+                    let completedTasks = 0;
 
                     const addFileTask = (url, originalName) => {
+                        totalTasks++;
                         tasks.push(async () => {
                             try {
                                 const response = await fetch(url);
@@ -599,6 +624,13 @@
 
                                 folder.file(safeName, blob);
                                 fileCount++;
+                                completedTasks++;
+                                
+                                // 前 50% 进度归属于网络拉取
+                                if (btn && totalTasks > 0) {
+                                    const percent = Math.floor((completedTasks / totalTasks) * 50);
+                                    btn.innerHTML = `<i class="fas fa-cloud-download-alt mr-2"></i> 极速拉取资源... ${percent}%`;
+                                }
                             } catch (err) {
                                 console.error(`文件下载失败: ${originalName}`, err);
                             }
@@ -631,13 +663,24 @@
                         folder.file("页面文本内容摘要.txt", textSummary);
                     }
 
+                    // 并发极速拉取所有云端文件
                     await Promise.all(tasks.map(t => t()));
 
                     if (fileCount === 0 && textSummary.trim().length <= 30) {
                         throw new Error('未找到任何可打包的文件资源');
                     }
 
-                    const content = await zip.generateAsync({ type: "blob" });
+                    // 后 50% 进度归属于零压迫急速打包 (STORE技术，不损耗CPU，瞬间完成)
+                    const content = await zip.generateAsync({ 
+                        type: "blob",
+                        compression: "STORE" 
+                    }, (metadata) => {
+                        if (btn) {
+                            const percent = 50 + Math.floor(metadata.percent / 2);
+                            btn.innerHTML = `<i class="fas fa-box text-xl mr-2"></i> 极速生成中... ${percent}%`;
+                        }
+                    });
+                    
                     saveAs(content, `全部资源打包_${new Date().getTime()}.zip`);
                     
                     if (btn) {
@@ -685,7 +728,7 @@
             },
             
             async handleComboFileSelect(event) {
-                const files = event.target.files;
+                const files = event.target.files || (event.dataTransfer ? event.dataTransfer.files : null);
                 if (!files || files.length === 0) return;
                 
                 const dropZone = document.getElementById('combo-drop-zone'); 
@@ -693,30 +736,30 @@
                 
                 dropZone.innerHTML = `
                     <i class="fas fa-spinner fa-spin text-2xl text-primary mb-1"></i>
-                    <p class="text-sm">安全写入云端中...</p>
+                    <p class="text-sm font-medium" id="combo-upload-status">排队就绪中...</p>
                 `;
                 
-                for (let i = 0; i < files.length; i++) {
-                    const uploadResult = await this.uploadFileToBackend(files[i]);
-                    if (uploadResult && uploadResult.success) {
+                const results = await this.uploadFilesConcurrent(files, (percent) => {
+                    const statusText = document.getElementById('combo-upload-status');
+                    if (statusText) statusText.innerText = `极速上传中: ${percent}%`;
+                });
+                
+                results.forEach(res => {
+                    if (res.data && res.data.success) {
                         let type = 'document';
-                        if (files[i].type.startsWith('image/')) {
-                            type = 'image'; 
-                        } else if (files[i].type.startsWith('audio/')) {
-                            type = 'audio'; 
-                        } else if (files[i].type.startsWith('video/')) {
-                            type = 'video';
-                        }
+                        if (res.file.type.startsWith('image/')) type = 'image'; 
+                        else if (res.file.type.startsWith('audio/')) type = 'audio'; 
+                        else if (res.file.type.startsWith('video/')) type = 'video';
                         
                         this.state.comboDraft.items.push({ 
                             id: 'item_' + Date.now() + Math.floor(Math.random()*100), 
                             type: type, 
-                            url: uploadResult.url, 
-                            name: uploadResult.name, 
-                            size: (uploadResult.size/1024/1024).toFixed(2) + ' MB' 
+                            url: res.data.url, 
+                            name: res.data.name, 
+                            size: (res.data.size/1024/1024).toFixed(2) + ' MB' 
                         });
                     }
-                }
+                });
                 
                 dropZone.innerHTML = originHtml; 
                 this.renderComboItems();
@@ -809,7 +852,7 @@
                 this.closeComboEditor();
             },
 
-            // ================= 基础UI与主页独立上传 =================
+            // ================= 基础UI与主页独立极速上传 =================
             setMode(mode) { 
                 this.state.currentMode = mode; 
                 this.updateNavUI(); 
@@ -871,11 +914,11 @@
                         <div id="upload-drop-ui" class="relative w-full h-24 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center hover:bg-gray-100 hover:border-primary transition-all">
                             <input type="file" accept="${cfg.accept}" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="app.handleMainFileSelect(event)">
                             <i class="fas fa-cloud-upload-alt text-2xl text-gray-400 mb-1"></i>
-                            <p class="text-sm text-gray-500">点击或直接拖拽文件到这里上传</p>
+                            <p class="text-sm text-gray-500">点击或将文件直接拖拽到这里极速解析</p>
                         </div>
                         <div id="upload-progress-ui" class="hidden w-full h-24 bg-blue-50 rounded-xl border-2 border-primary flex items-center justify-center">
                             <i class="fas fa-spinner fa-spin text-2xl text-primary mr-2"></i>
-                            <span id="upload-status-text" class="text-primary font-medium text-sm">上传中...</span>
+                            <span id="upload-status-text" class="text-primary font-medium text-sm">排队就绪中...</span>
                         </div>
                     `;
                 }
@@ -883,31 +926,31 @@
             
             async handleMainFileSelect(event) {
                 if (!this.state.isAdmin) return;
-                const files = event.target.files;
+                const files = event.target.files || (event.dataTransfer ? event.dataTransfer.files : null);
                 if (!files || files.length === 0) return;
                 
                 document.getElementById('upload-drop-ui').classList.add('hidden'); 
                 document.getElementById('upload-progress-ui').classList.remove('hidden');
                 
-                for (let i = 0; i < files.length; i++) {
-                    const uploadResult = await this.uploadFileToBackend(files[i]);
-                    if (uploadResult && uploadResult.success) {
+                const results = await this.uploadFilesConcurrent(files, (percent) => {
+                    const statusText = document.getElementById('upload-status-text');
+                    if (statusText) statusText.innerText = `极速上传中: ${percent}%`;
+                });
+                
+                results.forEach(res => {
+                    if (res.data && res.data.success) {
                         let type = 'document';
-                        if (files[i].type.startsWith('image/')) {
-                            type = 'image'; 
-                        } else if (files[i].type.startsWith('audio/')) {
-                            type = 'audio'; 
-                        } else if (files[i].type.startsWith('video/')) {
-                            type = 'video';
-                        }
+                        if (res.file.type.startsWith('image/')) type = 'image'; 
+                        else if (res.file.type.startsWith('audio/')) type = 'audio'; 
+                        else if (res.file.type.startsWith('video/')) type = 'video';
                         
                         this.addBlockToState(type, { 
-                            url: uploadResult.url, 
-                            name: uploadResult.name, 
-                            size: (uploadResult.size/1024/1024).toFixed(2) + ' MB' 
+                            url: res.data.url, 
+                            name: res.data.name, 
+                            size: (res.data.size/1024/1024).toFixed(2) + ' MB' 
                         });
                     }
-                }
+                });
                 
                 document.getElementById('upload-drop-ui').classList.remove('hidden'); 
                 document.getElementById('upload-progress-ui').classList.add('hidden');
@@ -1170,7 +1213,7 @@
                     </div>
                     <p class="text-center text-xs text-gray-300 mt-8 mb-6 tracking-widest uppercase">THE END</p>
                     
-                    <!-- 一键批量下载功能挂载区 -->
+                    <!-- 一键批量极速下载功能挂载区 -->
                     <div class="fixed bottom-0 left-0 w-full p-4 pb-8 bg-white/85 backdrop-blur-xl border-t border-gray-100 z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.06)]">
                         <button id="btn-batch-download" onclick="app.downloadAllFiles()" class="w-full max-w-lg mx-auto bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3.5 rounded-xl shadow-[0_4px_15px_rgba(30,144,255,0.3)] hover:shadow-[0_6px_25px_rgba(30,144,255,0.4)] hover:-translate-y-0.5 transition-all font-semibold flex items-center justify-center text-[15px] tracking-wide active:scale-95">
                             <i class="fas fa-cloud-download-alt mr-2 text-lg"></i> 一键打包下载全部内容
@@ -1180,16 +1223,15 @@
                 container.innerHTML = html;
             },
 
-            // ================= 二维码生成与美化引擎 =================
+            // ================= 二维码美化引擎 =================
             renderQR() {
                 const qrContainer = document.getElementById('qrcode'); 
                 
-                // 核心修复：重绘前彻底清空 Canvas 防止内存溢出与重叠
                 qrContainer.innerHTML = '';
                 
                 new QRCode(qrContainer, { 
                     text: this.state.liveUrl, 
-                    width: 180, // 对应版面栅格缩小调整
+                    width: 180, 
                     height: 180, 
                     colorDark : this.state.qrConfig.dark, 
                     colorLight : this.state.qrConfig.light, 
