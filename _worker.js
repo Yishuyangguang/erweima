@@ -4,10 +4,12 @@ export default {
     const path = url.pathname;
     const method = request.method;
 
+    // 追加 Access-Control-Expose-Headers 供前端计算真实进度百分比
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Expose-Headers': 'Content-Length',
     };
 
     if (method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -36,7 +38,7 @@ export default {
       }
     }
 
-    // 2. 文件上传接口 (写入 R2) - 核心修复区
+    // 2. 文件上传接口 (写入 R2)
     if (path === '/api/upload' && method === 'POST') {
       if (!checkAuth(request)) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
       try {
@@ -50,7 +52,6 @@ export default {
         const safeName = file.name.replace(/[^\u4e00-\u9fa5a-zA-Z0-9.\-_]/g, '_');
         const fileId = Date.now() + '_' + Math.random().toString(36).substring(2, 6) + '_' + safeName;
         
-        // 核心修复：将 stream() 改为 arrayBuffer() 以兼容所有 CF Workers 运行环境，避免 500 报错
         const fileBuffer = await file.arrayBuffer();
         const mimeType = file.type || 'application/octet-stream';
 
@@ -62,7 +63,7 @@ export default {
           success: true, 
           message: '已上传后台', 
           url: `/r2/${fileId}`, 
-          name: file.name, // 前端展示依旧用原名
+          name: file.name, 
           size: file.size 
         }), { 
             status: 200, 
