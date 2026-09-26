@@ -15,9 +15,10 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
-    // 鉴权中间件
+    // 鉴权中间件：读取 Cloudflare 环境变量 ADMIN_PWD
     const checkAuth = (req) => {
       const auth = req.headers.get('Authorization');
+      // 核心密码设置：请在 CF Pages 设置 -> 环境变量中添加 ADMIN_PWD。未设置则默认 admin123
       const validPwd = env.ADMIN_PWD || 'admin123';
       return auth === `Bearer ${validPwd}`;
     };
@@ -26,7 +27,8 @@ export default {
     if (path === '/api/auth' && method === 'POST') {
       try {
         const body = await request.json();
-        if (body.password === (env.ADMIN_PWD || 'admin123')) {
+        const validPwd = env.ADMIN_PWD || 'admin123';
+        if (body.password === validPwd) {
           return new Response(JSON.stringify({ success: true, token: body.password }), { 
             status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } 
           });
@@ -47,6 +49,7 @@ export default {
       const file = formData.get('file');
       if (!file) return new Response('No file provided', { status: 400, headers: corsHeaders });
       
+      // 生成防冲突文件键名
       const fileId = Date.now() + '_' + Math.random().toString(36).substring(2, 8) + '_' + file.name;
       
       await env.BUCKET.put(fileId, file.stream(), {
@@ -57,7 +60,7 @@ export default {
         success: true, 
         message: '已上传后台',
         url: `/r2/${fileId}`, 
-        name: file.name, 
+        name: file.name, // 原样保存文件名
         size: file.size 
       }), { 
         status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } 
@@ -102,7 +105,7 @@ export default {
       }
     }
 
-    // 5. 媒体流读取
+    // 5. 媒体流读取 (支持前端 JSZip 打包请求)
     if (path.startsWith('/r2/')) {
       const key = decodeURIComponent(path.substring(4));
       const obj = await env.BUCKET.get(key);
