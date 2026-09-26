@@ -4,12 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>高级动态活码与资源分发系统</title>
-    <!-- Tailwind 样式引擎 -->
+    
+    <!-- 引入外部引擎与样式 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 活码生成引擎 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- JSZip 与 FileSaver 用于一键打包下载引擎 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
@@ -24,22 +23,40 @@
         }
     </script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #F8FAFC; color: #333; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            background-color: #F8FAFC; 
+            color: #333; 
+        }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .drag-active { border-color: #1E90FF !important; background-color: #EBF5FF !important; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        @keyframes slideIn { 
+            from { opacity: 0; transform: translateY(10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
         .block-animate { animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        
+        /* 管理员权限样式隔离 */
         .admin-only { display: none !important; }
         body.is-admin .admin-only { display: flex !important; }
         body.is-admin .admin-only-block { display: block !important; }
-        .sortable-ghost { opacity: 0.4; background-color: #f0f9ff; border: 1px dashed #1E90FF; }
-        /* 移动端 H5 底部安全区与悬浮下载按钮占位 */
-        .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom) + 80px); }
+        
+        /* 拖拽排序特效 */
+        .sortable-ghost { 
+            opacity: 0.4; 
+            background-color: #f0f9ff; 
+            border: 1px dashed #1E90FF; 
+        }
+        
+        /* 移动端 H5 底部安全区，防止被悬浮按钮遮挡 */
+        .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom) + 100px); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-8 px-4" id="drop-zone">
 
+    <!-- 顶部导航栏 -->
     <header class="w-full max-w-6xl flex justify-center gap-3 mb-8 flex-wrap admin-only">
         <button onclick="app.setMode('text')" class="nav-btn bg-white px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-gray-600 active-nav">文本</button>
         <button onclick="app.setMode('url')" class="nav-btn bg-white px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-gray-600">网址</button>
@@ -53,9 +70,12 @@
             <i class="fas fa-cubes text-sm mr-2"></i>组合上传
         </button>
 
-        <button onclick="app.setMode('uploaded')" class="nav-btn bg-blue-50 border border-blue-100 px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-primary font-semibold flex items-center"><i class="fas fa-cloud text-sm mr-2"></i>已上传</button>
+        <button onclick="app.setMode('uploaded')" class="nav-btn bg-blue-50 border border-blue-100 px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-primary font-semibold flex items-center">
+            <i class="fas fa-cloud text-sm mr-2"></i>已上传
+        </button>
     </header>
 
+    <!-- PC端管理工作区 -->
     <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-3 gap-6 admin-only">
         <section class="lg:col-span-2 flex flex-col gap-4 relative">
             <div id="input-panel" class="bg-white rounded-2xl shadow-soft p-6 relative border-2 border-dashed border-transparent transition-all">
@@ -63,7 +83,9 @@
                     <h2 id="panel-title" class="text-lg font-semibold text-gray-700"><i class="fas fa-keyboard text-primary mr-2"></i>添加文本</h2>
                     <span class="text-xs text-gray-400">支持直接拖拽资源</span>
                 </div>
+                
                 <div id="dynamic-input-area" class="w-full min-h-[120px]"></div>
+                
                 <div class="flex justify-between items-center mt-4">
                     <p class="text-xs text-gray-400" id="panel-hint">文字长度无限制，扫码即刻展示</p>
                     <button id="btn-add-block" onclick="app.addCurrentBlock()" class="bg-primary text-white px-6 py-2 rounded-full hover:bg-blue-600 shadow transition-all">添加到内容流水线</button>
@@ -73,7 +95,9 @@
             <div class="bg-white rounded-2xl shadow-soft p-6 min-h-[300px]">
                 <div class="flex justify-between items-center mb-4 border-b pb-2">
                     <h3 class="text-md font-semibold text-gray-700">当前在线流 (扫码可见)</h3>
-                    <button onclick="app.syncToCloud()" class="bg-green-500 text-white px-4 py-1.5 text-sm rounded hover:bg-green-600 transition-all shadow"><i class="fas fa-rotate mr-1"></i> 发布至前端</button>
+                    <button onclick="app.syncToCloud()" class="bg-green-500 text-white px-4 py-1.5 text-sm rounded hover:bg-green-600 transition-all shadow">
+                        <i class="fas fa-rotate mr-1"></i> 发布至前端
+                    </button>
                 </div>
                 <div id="blocks-container" class="flex flex-col gap-4 w-full"></div>
             </div>
@@ -94,10 +118,10 @@
         </aside>
     </main>
 
-    <!-- H5 游客实时预览容器 (移动端入口) -->
+    <!-- H5 游客实时预览容器 (扫码直接进入此界面) -->
     <div id="mobile-live-container" class="hidden w-full max-w-lg mx-auto bg-gray-50 min-h-screen pb-safe"></div>
 
-    <!-- 组合编辑器 (Combo Editor) -->
+    <!-- 全屏图文组合编辑器 -->
     <div id="combo-editor-modal" class="fixed inset-0 bg-gray-100 z-[150] hidden flex-col">
         <div class="h-16 bg-white shadow-sm flex items-center justify-between px-6 border-b shrink-0">
             <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-cubes text-primary mr-2"></i>全能图文组合创作</h2>
@@ -106,29 +130,42 @@
                 <button onclick="app.saveCombo()" class="px-5 py-1.5 bg-primary text-white rounded-full hover:bg-blue-600 shadow transition-all font-medium">确认组合并添加</button>
             </div>
         </div>
+        
         <div class="flex-1 overflow-y-auto p-6 flex flex-col items-center">
             <div class="w-full max-w-4xl bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-6">
+                
                 <div class="flex flex-col gap-2">
                     <input type="text" id="combo-title" placeholder="输入大标题 (选填)" class="w-full text-2xl font-bold border-none outline-none placeholder-gray-300 focus:ring-0">
                     <div class="flex gap-4 items-center bg-gray-50 p-2 rounded-lg border">
                         <i class="fas fa-text-height text-gray-400 ml-2"></i>
                         <select id="combo-size" class="bg-transparent border-none outline-none text-sm text-gray-600 font-medium">
-                            <option value="text-sm">偏小字体</option><option value="text-base" selected>标准字体</option>
-                            <option value="text-lg">偏大字体</option><option value="text-xl">特大字体</option>
+                            <option value="text-sm">偏小字体</option>
+                            <option value="text-base" selected>标准字体</option>
+                            <option value="text-lg">偏大字体</option>
+                            <option value="text-xl">特大字体</option>
                         </select>
-                        <span class="w-px h-4 bg-gray-300"></span><i class="fas fa-palette text-gray-400"></i>
+                        <span class="w-px h-4 bg-gray-300"></span>
+                        <i class="fas fa-palette text-gray-400"></i>
                         <select id="combo-color" class="bg-transparent border-none outline-none text-sm text-gray-600 font-medium">
-                            <option value="text-gray-800" selected>深灰 (默认)</option><option value="text-blue-600">商务蓝</option>
-                            <option value="text-red-600">警示红</option><option value="text-green-600">健康绿</option><option value="text-gray-500">浅灰说明</option>
+                            <option value="text-gray-800" selected>深灰 (默认)</option>
+                            <option value="text-blue-600">商务蓝</option>
+                            <option value="text-red-600">警示红</option>
+                            <option value="text-green-600">健康绿</option>
+                            <option value="text-gray-500">浅灰说明</option>
                         </select>
                     </div>
                 </div>
+                
                 <textarea id="combo-text" placeholder="在此输入自定义正文内容..." class="w-full h-40 resize-none border-none outline-none text-base placeholder-gray-300 leading-relaxed"></textarea>
+                
                 <div class="border-t pt-6 mt-2">
                     <div class="flex justify-between items-end mb-4">
-                        <h3 class="font-semibold text-gray-700">多媒体资产与附件</h3><span class="text-xs text-gray-400">支持拖拽排序，向下滚动查看</span>
+                        <h3 class="font-semibold text-gray-700">多媒体资产与附件</h3>
+                        <span class="text-xs text-gray-400">支持拖拽排序，向下滚动查看</span>
                     </div>
+                    
                     <ul id="combo-items-list" class="flex flex-col gap-3 mb-4 min-h-[50px]"></ul>
+                    
                     <div id="combo-drop-zone" class="relative w-full h-24 bg-blue-50/50 rounded-xl border-2 border-dashed border-blue-200 flex flex-col items-center justify-center hover:bg-blue-50 transition-all group">
                         <input type="file" id="combo-file-input" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="app.handleComboFileSelect(event)">
                         <i class="fas fa-plus-circle text-2xl text-blue-300 group-hover:text-primary transition-colors mb-1"></i>
@@ -139,7 +176,7 @@
         </div>
     </div>
 
-    <!-- 鉴权模态框 -->
+    <!-- 游客鉴权遮罩层 -->
     <div id="tourist-mask" class="fixed inset-0 bg-white/90 backdrop-blur-md z-40 flex flex-col items-center justify-center">
         <i class="fas fa-shield-alt text-6xl text-gray-300 mb-6"></i>
         <h3 class="text-2xl font-semibold text-gray-700">内容管理控制台</h3>
@@ -147,8 +184,12 @@
         <button onclick="document.getElementById('login-modal').classList.remove('hidden')" class="mt-8 bg-primary text-white px-8 py-3 rounded-full shadow-lg hover:bg-blue-600 transition-all font-medium text-lg">验证管理员身份</button>
     </div>
 
-    <button onclick="app.logout()" id="logout-float-btn" class="admin-only fixed bottom-6 right-6 w-12 h-12 bg-red-500 text-white rounded-full shadow-xl items-center justify-center hover:bg-red-600 transition-all z-50"><i class="fas fa-sign-out-alt"></i></button>
+    <!-- 悬浮退出按钮 -->
+    <button onclick="app.logout()" id="logout-float-btn" class="admin-only fixed bottom-6 right-6 w-12 h-12 bg-red-500 text-white rounded-full shadow-xl items-center justify-center hover:bg-red-600 transition-all z-50">
+        <i class="fas fa-sign-out-alt"></i>
+    </button>
 
+    <!-- 管理员登录弹窗 -->
     <div id="login-modal" class="fixed inset-0 bg-black/60 z-[200] hidden flex items-center justify-center backdrop-blur-sm">
         <div class="bg-white rounded-2xl p-8 w-80 shadow-2xl transform transition-all scale-100 relative">
             <h3 class="text-xl font-bold mb-6 text-center text-gray-800">系统鉴权</h3>
@@ -163,11 +204,15 @@
         </div>
     </div>
 
+    <!-- 文档与多媒体全屏预览弹窗 -->
     <div id="preview-modal" class="fixed inset-0 bg-black/85 z-[250] hidden flex flex-col items-center justify-center backdrop-blur-sm">
-        <div class="absolute top-4 right-4"><button onclick="app.closePreview()" class="text-white hover:text-gray-300 text-3xl"><i class="fas fa-times"></i></button></div>
+        <div class="absolute top-4 right-4">
+            <button onclick="app.closePreview()" class="text-white hover:text-gray-300 text-3xl"><i class="fas fa-times"></i></button>
+        </div>
         <div id="preview-content" class="w-11/12 h-5/6 bg-transparent rounded-xl overflow-hidden flex items-center justify-center relative"></div>
     </div>
 
+    <!-- 核心业务逻辑脚本 -->
     <script>
         const app = {
             state: {
@@ -194,6 +239,7 @@
 
             async init() {
                 const urlParams = new URLSearchParams(window.location.search);
+                // 判断是否为游客扫码进入
                 if (urlParams.get('view') === 'live') {
                     this.state.isLiveMode = true;
                     document.getElementById('mobile-live-container').classList.remove('hidden');
@@ -204,8 +250,11 @@
                     return;
                 }
 
-                if (this.state.token) await this.verifyTokenSilent();
-                else this.enforceTouristMode();
+                if (this.state.token) {
+                    await this.verifyTokenSilent();
+                } else {
+                    this.enforceTouristMode();
+                }
 
                 this.bindDragAndDrop();
                 this.updateNavUI();
@@ -215,67 +264,108 @@
                 this.renderQR(); 
             },
 
+            // ================= 身份鉴权控制 =================
             async login() {
                 const pwd = document.getElementById('admin-pwd').value;
                 try {
-                    const res = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pwd }) });
+                    const res = await fetch('/api/auth', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ password: pwd }) 
+                    });
                     if (res.ok) {
                         this.state.token = pwd;
                         sessionStorage.setItem('adminToken', pwd);
                         document.getElementById('login-modal').classList.add('hidden');
                         this.enableAdminMode();
-                    } else alert('⚠️ 鉴权失败：密码错误，请检查您的 CF 环境变量。');
-                } catch (e) { alert('后端连接异常，请确认 CF Pages 部署状态'); }
+                    } else {
+                        alert('⚠️ 鉴权失败：密码错误，请检查您的 CF 环境变量。');
+                    }
+                } catch (e) { 
+                    alert('后端连接异常，请确认 CF Pages 部署状态'); 
+                }
             },
             async verifyTokenSilent() {
                 try {
-                    const res = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: this.state.token }) });
+                    const res = await fetch('/api/auth', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ password: this.state.token }) 
+                    });
                     if (res.ok) this.enableAdminMode();
                     else this.enforceTouristMode();
-                } catch (e) { this.enforceTouristMode(); }
+                } catch (e) { 
+                    this.enforceTouristMode(); 
+                }
             },
-            logout() { this.state.token = ''; sessionStorage.removeItem('adminToken'); this.enforceTouristMode(); },
+            logout() { 
+                this.state.token = ''; 
+                sessionStorage.removeItem('adminToken'); 
+                this.enforceTouristMode(); 
+            },
             enableAdminMode() {
-                this.state.isAdmin = true; document.body.classList.add('is-admin');
+                this.state.isAdmin = true; 
+                document.body.classList.add('is-admin');
                 document.getElementById('tourist-mask').classList.add('hidden');
-                if(this.state.currentMode === 'uploaded') this.renderInputArea();
+                if (this.state.currentMode === 'uploaded') this.renderInputArea();
             },
             enforceTouristMode() {
-                this.state.isAdmin = false; document.body.classList.remove('is-admin');
+                this.state.isAdmin = false; 
+                document.body.classList.remove('is-admin');
                 document.getElementById('tourist-mask').classList.remove('hidden');
             },
 
+            // ================= 云端通讯引擎 (R2 接口) =================
             async fetchCloudConfig() {
                 try {
                     const res = await fetch('/api/config');
                     if (res.ok) {
                         this.state.blocks = await res.json() || [];
-                        if(!this.state.isLiveMode) this.renderBlocks();
+                        if (!this.state.isLiveMode) this.renderBlocks();
                     }
-                } catch (e) {}
+                } catch (e) {
+                    console.error('配置加载失败', e);
+                }
             },
             async syncToCloud() {
                 if (!this.state.isAdmin) return;
-                const res = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.token}` }, body: JSON.stringify(this.state.blocks) });
+                const res = await fetch('/api/config', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.token}` }, 
+                    body: JSON.stringify(this.state.blocks) 
+                });
                 if (res.ok) alert('🚀 全局流水线发布成功，扫码用户将立刻看到最新内容！');
-                else alert('发布失败');
+                else alert('发布失败，请检查网络');
             },
             async uploadFileToBackend(file) {
                 if (!this.state.isAdmin) return null;
-                const formData = new FormData(); formData.append('file', file);
+                const formData = new FormData(); 
+                formData.append('file', file);
                 try {
-                    const res = await fetch('/api/upload', { method: 'POST', headers: { 'Authorization': `Bearer ${this.state.token}` }, body: formData });
+                    const res = await fetch('/api/upload', { 
+                        method: 'POST', 
+                        headers: { 'Authorization': `Bearer ${this.state.token}` }, 
+                        body: formData 
+                    });
                     return res.ok ? await res.json() : null;
-                } catch (e) { return null; }
+                } catch (e) { 
+                    return null; 
+                }
             },
             async deleteCloudFile(url) {
                 if (!url.startsWith('/r2/')) return;
                 try {
-                    await fetch('/api/file', { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.token}` }, body: JSON.stringify({ url: url }) });
-                } catch (e) {}
+                    await fetch('/api/file', { 
+                        method: 'DELETE', 
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.token}` }, 
+                        body: JSON.stringify({ url: url }) 
+                    });
+                } catch (e) {
+                    console.error('缓存清理异常', e);
+                }
             },
 
-            // =============== 游客端 一键打包下载 (ZIP) 引擎 ===============
+            // ================= 游客端 一键打包下载 (ZIP) =================
             async downloadAllFiles() {
                 if (this.state.blocks.length === 0) return alert('当前页面没有任何内容可供下载。');
                 
@@ -289,9 +379,8 @@
                     let textSummary = "===== 页面内容与文本摘要 =====\n\n";
                     let fileCount = 0;
                     
-                    // 递归收集文件任务
                     const tasks = [];
-                    const namesTracker = {}; // 记录文件名防止冲突重叠
+                    const namesTracker = {}; 
 
                     const addFileTask = (url, originalName) => {
                         tasks.push(async () => {
@@ -299,7 +388,6 @@
                                 const response = await fetch(url);
                                 const blob = await response.blob();
                                 
-                                // 防冲突重名处理
                                 let safeName = originalName || `文件_${Date.now()}.bin`;
                                 if (namesTracker[safeName]) {
                                     const parts = safeName.split('.');
@@ -319,13 +407,15 @@
                     };
 
                     this.state.blocks.forEach(block => {
-                        if (block.type === 'text') textSummary += `[独立文本]\n${block.content}\n\n`;
-                        if (block.type === 'url') textSummary += `[相关链接]\n${block.content}\n\n`;
-                        
+                        if (block.type === 'text') {
+                            textSummary += `[独立文本]\n${block.content}\n\n`;
+                        }
+                        if (block.type === 'url') {
+                            textSummary += `[相关链接]\n${block.content}\n\n`;
+                        }
                         if (['image', 'audio', 'video', 'document'].includes(block.type)) {
                             addFileTask(block.content.url, block.content.name);
                         }
-
                         if (block.type === 'combo') {
                             if (block.content.title || block.content.text) {
                                 textSummary += `[组合: ${block.content.title || '无题'}]\n${block.content.text || ''}\n\n`;
@@ -338,19 +428,16 @@
                         }
                     });
 
-                    // 文本聚合进ZIP
                     if (textSummary.trim().length > 30) {
                         folder.file("页面文本内容摘要.txt", textSummary);
                     }
 
-                    // 并发抓取资源
                     await Promise.all(tasks.map(t => t()));
 
                     if (fileCount === 0 && textSummary.trim().length <= 30) {
                         throw new Error('未找到任何可打包的文件资源');
                     }
 
-                    // 生成压缩包并保存
                     const content = await zip.generateAsync({ type: "blob" });
                     saveAs(content, `全部资源打包_${new Date().getTime()}.zip`);
                     
@@ -363,145 +450,303 @@
                         }, 3000);
                     }
                 } catch (e) {
-                    alert('打包下载失败，可能网络中断或跨域限制。');
+                    alert('打包下载失败，网络中断或触发浏览器安全限制。');
                     if (btn) btn.innerHTML = '<i class="fas fa-cloud-download-alt mr-2"></i> 一键打包下载全部内容';
                 }
             },
 
-            // 组合编辑器逻辑
+            // ================= 组合编辑器交互逻辑 =================
             openComboEditor() {
                 this.state.comboDraft = { title: '', text: '', size: 'text-base', color: 'text-gray-800', items: [] };
-                document.getElementById('combo-title').value = ''; document.getElementById('combo-text').value = '';
-                document.getElementById('combo-size').value = 'text-base'; document.getElementById('combo-color').value = 'text-gray-800';
+                document.getElementById('combo-title').value = ''; 
+                document.getElementById('combo-text').value = '';
+                document.getElementById('combo-size').value = 'text-base'; 
+                document.getElementById('combo-color').value = 'text-gray-800';
+                
                 this.renderComboItems();
-                document.getElementById('combo-editor-modal').classList.remove('hidden'); document.getElementById('combo-editor-modal').classList.add('flex');
+                document.getElementById('combo-editor-modal').classList.remove('hidden'); 
+                document.getElementById('combo-editor-modal').classList.add('flex');
             },
-            closeComboEditor() { document.getElementById('combo-editor-modal').classList.add('hidden'); document.getElementById('combo-editor-modal').classList.remove('flex'); },
+            closeComboEditor() { 
+                document.getElementById('combo-editor-modal').classList.add('hidden'); 
+                document.getElementById('combo-editor-modal').classList.remove('flex'); 
+            },
             async handleComboFileSelect(event) {
                 const files = event.target.files || event.dataTransfer.files;
                 if (!files || files.length === 0) return;
-                const dropZone = document.getElementById('combo-drop-zone'); const originHtml = dropZone.innerHTML;
-                dropZone.innerHTML = `<i class="fas fa-spinner fa-spin text-2xl text-primary mb-1"></i><p class="text-sm">安全写入云端中...</p>`;
+                
+                const dropZone = document.getElementById('combo-drop-zone'); 
+                const originHtml = dropZone.innerHTML;
+                
+                dropZone.innerHTML = `
+                    <i class="fas fa-spinner fa-spin text-2xl text-primary mb-1"></i>
+                    <p class="text-sm">安全写入云端中...</p>
+                `;
+                
                 for (let i = 0; i < files.length; i++) {
                     const uploadResult = await this.uploadFileToBackend(files[i]);
                     if (uploadResult && uploadResult.success) {
                         let type = 'document';
-                        if (files[i].type.startsWith('image/')) type = 'image'; else if (files[i].type.startsWith('audio/')) type = 'audio'; else if (files[i].type.startsWith('video/')) type = 'video';
-                        this.state.comboDraft.items.push({ id: 'item_' + Date.now() + Math.floor(Math.random()*100), type: type, url: uploadResult.url, name: uploadResult.name, size: (uploadResult.size/1024/1024).toFixed(2) + ' MB' });
+                        if (files[i].type.startsWith('image/')) type = 'image'; 
+                        else if (files[i].type.startsWith('audio/')) type = 'audio'; 
+                        else if (files[i].type.startsWith('video/')) type = 'video';
+                        
+                        this.state.comboDraft.items.push({ 
+                            id: 'item_' + Date.now() + Math.floor(Math.random()*100), 
+                            type: type, 
+                            url: uploadResult.url, 
+                            name: uploadResult.name, 
+                            size: (uploadResult.size/1024/1024).toFixed(2) + ' MB' 
+                        });
                     }
                 }
-                dropZone.innerHTML = originHtml; this.renderComboItems();
+                dropZone.innerHTML = originHtml; 
+                this.renderComboItems();
             },
-            removeComboItem(index) { this.deleteCloudFile(this.state.comboDraft.items[index].url); this.state.comboDraft.items.splice(index, 1); this.renderComboItems(); },
+            removeComboItem(index) { 
+                this.deleteCloudFile(this.state.comboDraft.items[index].url); 
+                this.state.comboDraft.items.splice(index, 1); 
+                this.renderComboItems(); 
+            },
             
-            handleDragStart(e, index) { this.state.draggedItemIndex = index; e.dataTransfer.effectAllowed = "move"; e.target.classList.add('sortable-ghost'); },
-            handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; },
+            // HTML5 原生拖拽排序 (支持多媒体卡片换序)
+            handleDragStart(e, index) { 
+                this.state.draggedItemIndex = index; 
+                e.dataTransfer.effectAllowed = "move"; 
+                e.target.classList.add('sortable-ghost'); 
+            },
+            handleDragOver(e) { 
+                e.preventDefault(); 
+                e.dataTransfer.dropEffect = "move"; 
+            },
             handleDrop(e, targetIndex) {
-                e.preventDefault(); const sourceIndex = this.state.draggedItemIndex;
+                e.preventDefault(); 
+                const sourceIndex = this.state.draggedItemIndex;
                 if (sourceIndex !== null && sourceIndex !== targetIndex) {
-                    const items = this.state.comboDraft.items; const [removed] = items.splice(sourceIndex, 1); items.splice(targetIndex, 0, removed); this.renderComboItems();
+                    const items = this.state.comboDraft.items; 
+                    const [removed] = items.splice(sourceIndex, 1); 
+                    items.splice(targetIndex, 0, removed); 
+                    this.renderComboItems();
                 }
             },
-            handleDragEnd(e) { e.target.classList.remove('sortable-ghost'); this.state.draggedItemIndex = null; },
+            handleDragEnd(e) { 
+                e.target.classList.remove('sortable-ghost'); 
+                this.state.draggedItemIndex = null; 
+            },
             renderComboItems() {
-                const list = document.getElementById('combo-items-list'); list.innerHTML = '';
+                const list = document.getElementById('combo-items-list'); 
+                list.innerHTML = '';
+                
                 this.state.comboDraft.items.forEach((item, index) => {
-                    const li = document.createElement('li'); li.draggable = true;
+                    const li = document.createElement('li'); 
+                    li.draggable = true;
                     li.className = 'flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-move hover:shadow-sm transition-all group';
-                    li.ondragstart = (e) => this.handleDragStart(e, index); li.ondragover = (e) => this.handleDragOver(e); li.ondrop = (e) => this.handleDrop(e, index); li.ondragend = (e) => this.handleDragEnd(e);
-                    let icon = 'fa-file-alt text-gray-500'; if(item.type === 'image') icon = 'fa-image text-blue-500'; if(item.type === 'video') icon = 'fa-video text-purple-500'; if(item.type === 'audio') icon = 'fa-music text-green-500';
-                    li.innerHTML = `<div class="flex items-center w-full truncate pr-4"><i class="fas fa-bars text-gray-300 mr-3"></i><div class="w-8 h-8 rounded bg-white border flex items-center justify-center mr-3 shrink-0"><i class="fas ${icon}"></i></div><div class="flex flex-col truncate"><span class="text-sm font-medium text-gray-700 truncate">${item.name}</span><span class="text-xs text-gray-400">${item.size}</span></div></div><button onclick="app.removeComboItem(${index})" class="text-gray-400 hover:text-red-500 shrink-0"><i class="fas fa-times-circle text-lg"></i></button>`;
+                    
+                    li.ondragstart = (e) => this.handleDragStart(e, index); 
+                    li.ondragover = (e) => this.handleDragOver(e); 
+                    li.ondrop = (e) => this.handleDrop(e, index); 
+                    li.ondragend = (e) => this.handleDragEnd(e);
+                    
+                    let icon = 'fa-file-alt text-gray-500'; 
+                    if(item.type === 'image') icon = 'fa-image text-blue-500'; 
+                    if(item.type === 'video') icon = 'fa-video text-purple-500'; 
+                    if(item.type === 'audio') icon = 'fa-music text-green-500';
+                    
+                    li.innerHTML = `
+                        <div class="flex items-center w-full truncate pr-4">
+                            <i class="fas fa-bars text-gray-300 mr-3"></i>
+                            <div class="w-8 h-8 rounded bg-white border flex items-center justify-center mr-3 shrink-0">
+                                <i class="fas ${icon}"></i>
+                            </div>
+                            <div class="flex flex-col truncate">
+                                <span class="text-sm font-medium text-gray-700 truncate">${item.name}</span>
+                                <span class="text-xs text-gray-400">${item.size}</span>
+                            </div>
+                        </div>
+                        <button onclick="app.removeComboItem(${index})" class="text-gray-400 hover:text-red-500 shrink-0">
+                            <i class="fas fa-times-circle text-lg"></i>
+                        </button>
+                    `;
                     list.appendChild(li);
                 });
             },
             saveCombo() {
-                const title = document.getElementById('combo-title').value.trim(); const text = document.getElementById('combo-text').value.trim();
-                if(!title && !text && this.state.comboDraft.items.length === 0) return alert('组合不能为空，请补充文字或资产');
-                this.state.comboDraft.title = title; this.state.comboDraft.text = text; this.state.comboDraft.size = document.getElementById('combo-size').value; this.state.comboDraft.color = document.getElementById('combo-color').value;
-                this.addBlockToState('combo', JSON.parse(JSON.stringify(this.state.comboDraft))); this.closeComboEditor();
+                const title = document.getElementById('combo-title').value.trim(); 
+                const text = document.getElementById('combo-text').value.trim();
+                
+                if (!title && !text && this.state.comboDraft.items.length === 0) {
+                    return alert('组合不能为空，请补充文字或资产');
+                }
+                
+                this.state.comboDraft.title = title; 
+                this.state.comboDraft.text = text; 
+                this.state.comboDraft.size = document.getElementById('combo-size').value; 
+                this.state.comboDraft.color = document.getElementById('combo-color').value;
+                
+                this.addBlockToState('combo', JSON.parse(JSON.stringify(this.state.comboDraft))); 
+                this.closeComboEditor();
             },
 
-            setMode(mode) { this.state.currentMode = mode; this.updateNavUI(); this.renderInputArea(); },
+            // ================= 基础UI与全局拖拽上传 =================
+            setMode(mode) { 
+                this.state.currentMode = mode; 
+                this.updateNavUI(); 
+                this.renderInputArea(); 
+            },
             updateNavUI() {
                 document.querySelectorAll('.nav-btn').forEach(btn => {
                     btn.classList.remove('ring-2', 'ring-primary/20', 'bg-blue-50');
-                    if(btn.innerText.toLowerCase().includes(this.configs[this.state.currentMode].title.substring(2))) btn.classList.add('ring-2', 'ring-primary/20', 'bg-blue-50');
+                    if (btn.innerText.toLowerCase().includes(this.configs[this.state.currentMode].title.substring(2))) {
+                        btn.classList.add('ring-2', 'ring-primary/20', 'bg-blue-50');
+                    }
                 });
+                
                 const cfg = this.configs[this.state.currentMode];
-                if(document.getElementById('panel-title')) document.getElementById('panel-title').innerHTML = `<i class="fas ${cfg.icon} text-primary mr-2"></i>${cfg.title}`;
-                if(document.getElementById('panel-hint')) document.getElementById('panel-hint').innerText = cfg.hint;
-                if(document.getElementById('btn-add-block')) document.getElementById('btn-add-block').style.display = this.state.currentMode === 'uploaded' ? 'none' : 'block';
+                if (document.getElementById('panel-title')) {
+                    document.getElementById('panel-title').innerHTML = `<i class="fas ${cfg.icon} text-primary mr-2"></i>${cfg.title}`;
+                }
+                if (document.getElementById('panel-hint')) {
+                    document.getElementById('panel-hint').innerText = cfg.hint;
+                }
+                if (document.getElementById('btn-add-block')) {
+                    document.getElementById('btn-add-block').style.display = this.state.currentMode === 'uploaded' ? 'none' : 'block';
+                }
             },
             renderInputArea() {
                 if (!this.state.isAdmin && this.state.currentMode === 'uploaded') return;
-                const area = document.getElementById('dynamic-input-area'); const mode = this.state.currentMode; const cfg = this.configs[mode];
+                
+                const area = document.getElementById('dynamic-input-area'); 
+                const mode = this.state.currentMode; 
+                const cfg = this.configs[mode];
+                
                 if (mode === 'text' || mode === 'url') {
-                    area.innerHTML = `<textarea id="input-data" class="w-full h-24 p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-primary/50 transition-all text-gray-700"></textarea>`;
+                    area.innerHTML = `
+                        <textarea id="input-data" class="w-full h-24 p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-primary/50 transition-all text-gray-700"></textarea>
+                    `;
                 } else if (mode === 'form') {
-                    area.innerHTML = `<input type="text" id="form-title" class="w-full p-2 rounded bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-primary/50 text-sm" placeholder="表单标题 (例如：意向客户登记)">`;
+                    area.innerHTML = `
+                        <input type="text" id="form-title" class="w-full p-2 rounded bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-primary/50 text-sm" placeholder="表单标题 (例如：意向客户登记)">
+                    `;
                 } else if (mode === 'uploaded') {
-                    area.innerHTML = `<div class="w-full max-h-60 overflow-y-auto no-scrollbar"><ul class="flex flex-col gap-2">${this.state.blocks.map(b => `<li class="bg-gray-50 p-2 rounded text-sm border flex justify-between"><span class="truncate w-4/5">${b.type==='text'||b.type==='url' ? b.content.substring(0,20)+'...' : (b.type==='combo' ? '[组合] '+b.content.title : b.content.name)}</span><span class="text-xs bg-gray-200 rounded px-2 text-gray-600">${b.type}</span></li>`).join('')}</ul></div>`;
+                    area.innerHTML = `
+                        <div class="w-full max-h-60 overflow-y-auto no-scrollbar">
+                            <ul class="flex flex-col gap-2">
+                                ${this.state.blocks.map(b => `
+                                    <li class="bg-gray-50 p-2 rounded text-sm border flex justify-between">
+                                        <span class="truncate w-4/5">
+                                            ${b.type === 'text' || b.type === 'url' ? b.content.substring(0,20) + '...' : (b.type === 'combo' ? '[组合] ' + b.content.title : b.content.name)}
+                                        </span>
+                                        <span class="text-xs bg-gray-200 rounded px-2 text-gray-600">${b.type}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    `;
                 } else {
-                    area.innerHTML = `<div id="upload-drop-ui" class="relative w-full h-24 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center hover:bg-gray-100 hover:border-primary transition-all"><input type="file" accept="${cfg.accept}" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="app.handleMainFileSelect(event)"><i class="fas fa-cloud-upload-alt text-2xl text-gray-400 mb-1"></i><p class="text-sm text-gray-500">点击或直接拖拽文件</p></div><div id="upload-progress-ui" class="hidden w-full h-24 bg-blue-50 rounded-xl border-2 border-primary flex items-center justify-center"><i class="fas fa-spinner fa-spin text-2xl text-primary mr-2"></i><span id="upload-status-text" class="text-primary font-medium text-sm">上传中...</span></div>`;
+                    area.innerHTML = `
+                        <div id="upload-drop-ui" class="relative w-full h-24 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center hover:bg-gray-100 hover:border-primary transition-all">
+                            <input type="file" accept="${cfg.accept}" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="app.handleMainFileSelect(event)">
+                            <i class="fas fa-cloud-upload-alt text-2xl text-gray-400 mb-1"></i>
+                            <p class="text-sm text-gray-500">点击或直接拖拽文件</p>
+                        </div>
+                        <div id="upload-progress-ui" class="hidden w-full h-24 bg-blue-50 rounded-xl border-2 border-primary flex items-center justify-center">
+                            <i class="fas fa-spinner fa-spin text-2xl text-primary mr-2"></i>
+                            <span id="upload-status-text" class="text-primary font-medium text-sm">上传中...</span>
+                        </div>
+                    `;
                 }
             },
             async handleMainFileSelect(event) {
                 if (!this.state.isAdmin) return;
                 const files = event.target.files || event.dataTransfer.files;
                 if (!files || files.length === 0) return;
-                document.getElementById('upload-drop-ui').classList.add('hidden'); document.getElementById('upload-progress-ui').classList.remove('hidden');
+                
+                document.getElementById('upload-drop-ui').classList.add('hidden'); 
+                document.getElementById('upload-progress-ui').classList.remove('hidden');
+                
                 for (let i = 0; i < files.length; i++) {
                     const uploadResult = await this.uploadFileToBackend(files[i]);
                     if (uploadResult && uploadResult.success) {
                         let type = 'document';
-                        if (files[i].type.startsWith('image/')) type = 'image'; else if (files[i].type.startsWith('audio/')) type = 'audio'; else if (files[i].type.startsWith('video/')) type = 'video';
-                        this.addBlockToState(type, { url: uploadResult.url, name: uploadResult.name, size: (uploadResult.size/1024/1024).toFixed(2) + ' MB' });
+                        if (files[i].type.startsWith('image/')) type = 'image'; 
+                        else if (files[i].type.startsWith('audio/')) type = 'audio'; 
+                        else if (files[i].type.startsWith('video/')) type = 'video';
+                        
+                        this.addBlockToState(type, { 
+                            url: uploadResult.url, 
+                            name: uploadResult.name, 
+                            size: (uploadResult.size/1024/1024).toFixed(2) + ' MB' 
+                        });
                     }
                 }
-                document.getElementById('upload-drop-ui').classList.remove('hidden'); document.getElementById('upload-progress-ui').classList.add('hidden');
+                
+                document.getElementById('upload-drop-ui').classList.remove('hidden'); 
+                document.getElementById('upload-progress-ui').classList.add('hidden');
             },
             bindDragAndDrop() {
-                const dropZone = document.getElementById('drop-zone'); const panel = document.getElementById('input-panel'); const comboModal = document.getElementById('combo-editor-modal');
+                const dropZone = document.getElementById('drop-zone'); 
+                const panel = document.getElementById('input-panel'); 
+                const comboModal = document.getElementById('combo-editor-modal');
+                
                 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                     dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
                     comboModal.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
                 });
-                dropZone.addEventListener('dragenter', () => { if(this.state.isAdmin && comboModal.classList.contains('hidden')) panel.classList.add('drag-active'); }, false);
+                
+                dropZone.addEventListener('dragenter', () => { 
+                    if(this.state.isAdmin && comboModal.classList.contains('hidden')) panel.classList.add('drag-active'); 
+                }, false);
+                
                 dropZone.addEventListener('dragleave', () => panel.classList.remove('drag-active'), false);
+                
                 dropZone.addEventListener('drop', (e) => {
                     panel.classList.remove('drag-active');
                     if(this.state.isAdmin && e.dataTransfer.files.length > 0) {
-                        if (!comboModal.classList.contains('hidden')) this.handleComboFileSelect(e); else this.handleMainFileSelect(e);
+                        if (!comboModal.classList.contains('hidden')) this.handleComboFileSelect(e); 
+                        else this.handleMainFileSelect(e);
                     }
                 }, false);
             },
             addCurrentBlock() {
                 if (!this.state.isAdmin) return;
                 const mode = this.state.currentMode;
+                
                 if (mode === 'text' || mode === 'url') {
                     const val = document.getElementById('input-data').value.trim();
-                    if (val) { this.addBlockToState(mode, val); document.getElementById('input-data').value = ''; }
+                    if (val) { 
+                        this.addBlockToState(mode, val); 
+                        document.getElementById('input-data').value = ''; 
+                    }
                 } else if (mode === 'form') {
                     const title = document.getElementById('form-title').value.trim() || '通用信息登记表';
-                    this.addBlockToState('form', { title: title, fieldCount: 3 }); document.getElementById('form-title').value = '';
+                    this.addBlockToState('form', { title: title, fieldCount: 3 }); 
+                    document.getElementById('form-title').value = '';
                 }
             },
             addBlockToState(type, content) {
                 this.state.blocks.push({ id: 'block_' + Date.now(), type: type, content: content });
-                this.renderBlocks(); if (this.state.currentMode === 'uploaded') this.renderInputArea();
+                this.renderBlocks(); 
+                if (this.state.currentMode === 'uploaded') this.renderInputArea();
             },
             removeBlock(id) {
                 if (!this.state.isAdmin) return;
                 const target = this.state.blocks.find(b => b.id === id);
                 if (target) {
-                    if (target.type === 'combo' && target.content.items) target.content.items.forEach(item => this.deleteCloudFile(item.url));
-                    else if (target.content.url) this.deleteCloudFile(target.content.url);
+                    if (target.type === 'combo' && target.content.items) {
+                        target.content.items.forEach(item => this.deleteCloudFile(item.url));
+                    } else if (target.content.url) {
+                        this.deleteCloudFile(target.content.url);
+                    }
                 }
                 this.state.blocks = this.state.blocks.filter(b => b.id !== id);
-                this.renderBlocks(); if (this.state.currentMode === 'uploaded') this.renderInputArea();
+                this.renderBlocks(); 
+                if (this.state.currentMode === 'uploaded') this.renderInputArea();
             },
 
-            escapeHtml(unsafe) { return unsafe.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); },
+            // ================= 视图渲染与预览引擎 =================
+            escapeHtml(unsafe) { 
+                return unsafe.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); 
+            },
             openDocumentPreview(url, name) {
                 const ext = name.split('.').pop().toLowerCase();
                 const absoluteUrl = url.startsWith('http') ? url : (window.location.origin + url);
@@ -509,39 +754,129 @@
                 document.getElementById('preview-modal').classList.remove('hidden');
                 
                 let inner = '';
-                if (ext === 'pdf') inner = `<iframe src="${url}" class="w-full h-full border-none"></iframe>`;
-                else if (['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) inner = `<iframe src="https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(absoluteUrl)}" class="w-full h-full border-none bg-white"></iframe>`;
-                else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) inner = `<img src="${url}" class="max-w-full max-h-full object-contain">`;
-                else if (['mp4', 'webm', 'ogg'].includes(ext)) inner = `<video src="${url}" controls autoplay class="max-w-full max-h-full"></video>`;
-                else inner = `<div class="text-center bg-white p-12 rounded-xl"><i class="fas fa-file text-6xl text-gray-300 mb-4"></i><p class="text-gray-600 mb-4">不支持在浏览器直接预览</p><a href="${url}" download class="bg-primary text-white px-6 py-2 rounded-full">直接下载</a></div>`;
-                
+                if (ext === 'pdf') {
+                    inner = `<iframe src="${url}" class="w-full h-full border-none"></iframe>`;
+                } else if (['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) {
+                    inner = `<iframe src="https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(absoluteUrl)}" class="w-full h-full border-none bg-white"></iframe>`;
+                } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+                    inner = `<img src="${url}" class="max-w-full max-h-full object-contain">`;
+                } else if (['mp4', 'webm', 'ogg'].includes(ext)) {
+                    inner = `<video src="${url}" controls autoplay class="max-w-full max-h-full"></video>`;
+                } else {
+                    inner = `
+                        <div class="text-center bg-white p-12 rounded-xl">
+                            <i class="fas fa-file text-6xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-600 mb-4">不支持在浏览器直接预览此格式</p>
+                            <a href="${url}" download class="bg-primary text-white px-6 py-2 rounded-full shadow-md">直接下载到本地</a>
+                        </div>
+                    `;
+                }
                 contentBox.innerHTML = inner;
             },
-            closePreview() { document.getElementById('preview-modal').classList.add('hidden'); document.getElementById('preview-content').innerHTML = ''; },
+            closePreview() { 
+                document.getElementById('preview-modal').classList.add('hidden'); 
+                document.getElementById('preview-content').innerHTML = ''; 
+            },
 
             generateBlockHtml(block, isLive = false) {
                 let html = '';
                 const baseClass = isLive ? 'w-full mb-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-100 overflow-hidden' : 'flex-1';
+                
                 if (block.type === 'combo') {
-                    const c = block.content; let comboInner = '';
-                    if(c.title) comboInner += `<h2 class="text-xl font-bold ${c.color} mb-3 leading-tight">${this.escapeHtml(c.title)}</h2>`;
-                    if(c.text) comboInner += `<p class="${c.size} ${c.color} whitespace-pre-wrap leading-relaxed mb-4 opacity-90">${this.escapeHtml(c.text)}</p>`;
-                    if(c.items && c.items.length > 0) {
-                        comboInner += `<div class="flex flex-col gap-3 mt-4 border-t pt-4">`;
-                        c.items.forEach(item => { comboInner += `<div class="rounded-xl overflow-hidden shadow-sm border border-gray-100 bg-gray-50/50">` + this.generateBlockHtml({type: item.type, content: item}, false) + `</div>`; });
+                    const c = block.content; 
+                    let comboInner = '';
+                    
+                    if (c.title) {
+                        comboInner += `<h2 class="text-xl font-bold ${c.color} mb-3 leading-tight">${this.escapeHtml(c.title)}</h2>`;
+                    }
+                    if (c.text) {
+                        comboInner += `<p class="${c.size} ${c.color} whitespace-pre-wrap leading-relaxed mb-4 opacity-90">${this.escapeHtml(c.text)}</p>`;
+                    }
+                    if (c.items && c.items.length > 0) {
+                        comboInner += `<div class="flex flex-col gap-3 mt-4 border-t pt-4 border-gray-200/60">`;
+                        c.items.forEach(item => { 
+                            comboInner += `
+                                <div class="rounded-xl overflow-hidden shadow-sm border border-gray-100 bg-white">
+                                    ${this.generateBlockHtml({type: item.type, content: item}, false)}
+                                </div>
+                            `; 
+                        });
                         comboInner += `</div>`;
                     }
-                    return `<div class="${baseClass} bg-gradient-to-br from-white to-gray-50 border-blue-100 border relative"><div class="absolute top-0 left-0 w-1 h-full bg-primary rounded-l-2xl"></div>${comboInner}</div>`;
+                    
+                    return `
+                        <div class="${baseClass} bg-gradient-to-br from-white to-gray-50 border-blue-100 border relative">
+                            <div class="absolute top-0 left-0 w-1.5 h-full bg-primary rounded-l-2xl opacity-80"></div>
+                            <div class="pl-2">${comboInner}</div>
+                        </div>
+                    `;
                 }
 
                 switch (block.type) {
-                    case 'text': html = `<div class="${baseClass}"><p class="text-gray-700 whitespace-pre-wrap">${this.escapeHtml(block.content)}</p></div>`; break;
-                    case 'url': html = `<div class="${baseClass}"><a href="${this.escapeHtml(block.content)}" target="_blank" class="text-blue-500 underline flex items-center break-all"><i class="fas fa-external-link-alt mr-2 shrink-0"></i> ${this.escapeHtml(block.content)}</a></div>`; break;
-                    case 'image': html = `<div class="${baseClass} p-1"><img src="${block.content.url}" class="w-full rounded-lg cursor-pointer hover:opacity-90 transition-all shadow-sm" onclick="app.openDocumentPreview('${block.content.url}', '${block.content.name}')"></div>`; break;
-                    case 'audio': html = `<div class="${baseClass} flex flex-col p-3"><span class="text-sm font-medium text-gray-700 mb-2 truncate px-2"><i class="fas fa-music text-green-500 mr-2"></i>${block.content.name}</span><audio controls src="${block.content.url}" class="w-full outline-none h-10 rounded-full bg-gray-100"></audio></div>`; break;
-                    case 'video': html = `<div class="${baseClass} bg-black flex justify-center p-0 m-0"><video src="${block.content.url}" controls class="w-full max-h-[300px] object-contain"></video></div>`; break;
-                    case 'document': html = `<div class="${baseClass} flex items-center bg-white p-3"><div class="w-12 h-12 bg-red-50 text-red-500 rounded-lg flex items-center justify-center mr-3 shrink-0"><i class="fas fa-file-pdf text-2xl"></i></div><div class="flex flex-col flex-1 overflow-hidden mr-2"><span class="text-sm font-semibold text-gray-800 truncate">${block.content.name}</span><span class="text-xs text-gray-400 mt-0.5">${block.content.size} · 点击预览</span></div><div class="flex flex-col gap-1 shrink-0"><button onclick="app.openDocumentPreview('${block.content.url}', '${block.content.name}')" class="text-xs bg-gray-100 px-3 py-1 rounded text-gray-700 hover:bg-gray-200">全屏查看</button><a href="${block.content.url}" download class="text-xs bg-primary text-white px-3 py-1 rounded hover:bg-blue-600 text-center"><i class="fas fa-download mr-1"></i>单选下载</a></div></div>`; break;
-                    case 'form': html = `<div class="${baseClass} border-2 border-dashed border-indigo-100 bg-indigo-50/40 p-5"><h4 class="font-bold text-indigo-900 mb-4 text-center text-lg">${this.escapeHtml(block.content.title)}</h4><input type="text" placeholder="您的姓名" class="w-full p-2.5 mb-3 border border-white rounded shadow-sm outline-none text-sm"><input type="tel" placeholder="联系方式" class="w-full p-2.5 mb-3 border border-white rounded shadow-sm outline-none text-sm"><button class="w-full bg-indigo-500 text-white py-2.5 rounded shadow-md hover:bg-indigo-600 transition-all font-medium mt-2">确认提交</button></div>`; break;
+                    case 'text': 
+                        html = `<div class="${baseClass}"><p class="text-gray-700 whitespace-pre-wrap">${this.escapeHtml(block.content)}</p></div>`; 
+                        break;
+                    case 'url': 
+                        html = `
+                            <div class="${baseClass}">
+                                <a href="${this.escapeHtml(block.content)}" target="_blank" class="text-blue-500 underline flex items-center break-all hover:text-blue-600 transition-colors">
+                                    <i class="fas fa-external-link-alt mr-2 shrink-0"></i> ${this.escapeHtml(block.content)}
+                                </a>
+                            </div>
+                        `; 
+                        break;
+                    case 'image': 
+                        html = `
+                            <div class="${baseClass} p-1">
+                                <img src="${block.content.url}" class="w-full rounded-lg cursor-pointer hover:opacity-95 hover:shadow-md transition-all object-cover max-h-[400px]" onclick="app.openDocumentPreview('${block.content.url}', '${block.content.name}')">
+                            </div>
+                        `; 
+                        break;
+                    case 'audio': 
+                        html = `
+                            <div class="${baseClass} flex flex-col p-3 bg-gray-50/50">
+                                <span class="text-sm font-medium text-gray-700 mb-3 truncate px-2 border-l-2 border-green-400 pl-2">
+                                    <i class="fas fa-music text-green-500 mr-2"></i>${block.content.name}
+                                </span>
+                                <audio controls src="${block.content.url}" class="w-full outline-none h-10 rounded-full bg-white shadow-sm border border-gray-100"></audio>
+                            </div>
+                        `; 
+                        break;
+                    case 'video': 
+                        html = `
+                            <div class="${baseClass} bg-black flex justify-center p-0 m-0 relative group">
+                                <video src="${block.content.url}" controls class="w-full max-h-[350px] object-contain"></video>
+                            </div>
+                        `; 
+                        break;
+                    case 'document': 
+                        html = `
+                            <div class="${baseClass} flex items-center bg-white p-3 hover:bg-gray-50 transition-colors">
+                                <div class="w-12 h-12 bg-red-50 text-red-500 rounded-lg flex items-center justify-center mr-3 shrink-0">
+                                    <i class="fas fa-file-pdf text-2xl"></i>
+                                </div>
+                                <div class="flex flex-col flex-1 overflow-hidden mr-3">
+                                    <span class="text-sm font-semibold text-gray-800 truncate">${block.content.name}</span>
+                                    <span class="text-xs text-gray-400 mt-0.5">${block.content.size} · 点击右侧预览</span>
+                                </div>
+                                <div class="flex flex-col gap-1.5 shrink-0">
+                                    <button onclick="app.openDocumentPreview('${block.content.url}', '${block.content.name}')" class="text-[11px] bg-gray-100 px-3 py-1 rounded-md text-gray-700 hover:bg-gray-200 font-medium">全屏查看</button>
+                                    <a href="${block.content.url}" download class="text-[11px] bg-primary text-white px-3 py-1 rounded-md hover:bg-blue-600 text-center font-medium">下载文件</a>
+                                </div>
+                            </div>
+                        `; 
+                        break;
+                    case 'form': 
+                        html = `
+                            <div class="${baseClass} border-2 border-dashed border-indigo-100 bg-indigo-50/40 p-6 relative overflow-hidden">
+                                <div class="absolute -right-6 -top-6 w-20 h-20 bg-indigo-100 rounded-full opacity-50"></div>
+                                <h4 class="font-bold text-indigo-900 mb-5 text-center text-lg relative z-10">${this.escapeHtml(block.content.title)}</h4>
+                                <input type="text" placeholder="您的姓名" class="w-full p-3 mb-3 border border-white rounded-lg shadow-sm outline-none focus:ring-2 focus:ring-indigo-200 text-sm relative z-10">
+                                <input type="tel" placeholder="联系方式" class="w-full p-3 mb-4 border border-white rounded-lg shadow-sm outline-none focus:ring-2 focus:ring-indigo-200 text-sm relative z-10">
+                                <button class="w-full bg-indigo-500 text-white py-3 rounded-lg shadow-md hover:bg-indigo-600 hover:shadow-lg transition-all font-medium relative z-10 tracking-wide">安全提交数据</button>
+                            </div>
+                        `; 
+                        break;
                 }
                 return html;
             },
@@ -549,14 +884,33 @@
             renderBlocks() {
                 const container = document.getElementById('blocks-container');
                 if (!container) return;
+                
                 if (this.state.blocks.length === 0) {
-                    container.innerHTML = `<div class="flex flex-col items-center justify-center h-40 text-gray-400"><i class="fas fa-layer-group text-4xl mb-3 opacity-50"></i><p class="text-sm">内容流为空，等待管理员拼装</p></div>`; return;
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-48 text-gray-400">
+                            <i class="fas fa-layer-group text-5xl mb-4 opacity-40"></i>
+                            <p class="text-sm font-medium">内容流水线为空，请在上方添加模块</p>
+                        </div>
+                    `; 
+                    return;
                 }
+                
                 container.innerHTML = '';
                 this.state.blocks.forEach((block) => {
                     const blockEl = document.createElement('div');
-                    blockEl.className = 'block-animate bg-white border border-gray-100 rounded-xl p-3 flex items-center justify-between group relative shadow-sm hover:shadow-md transition-all';
-                    blockEl.innerHTML = `<div class="flex items-center w-full overflow-hidden"><div class="mr-3 text-gray-300 shrink-0"><i class="fas fa-ellipsis-v"></i></div>${this.generateBlockHtml(block, false)}</div><button onclick="app.removeBlock('${block.id}')" class="w-8 h-8 rounded-full bg-red-50 text-red-500 items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white absolute right-4 shadow-md shrink-0"><i class="fas fa-trash-alt text-sm"></i></button>`;
+                    blockEl.className = 'block-animate bg-white border border-gray-100 rounded-xl p-3 flex items-center justify-between group relative shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] transition-all';
+                    
+                    blockEl.innerHTML = `
+                        <div class="flex items-center w-full overflow-hidden">
+                            <div class="mr-3 text-gray-300 shrink-0 cursor-move opacity-50 hover:opacity-100">
+                                <i class="fas fa-ellipsis-v"></i><i class="fas fa-ellipsis-v -ml-1"></i>
+                            </div>
+                            ${this.generateBlockHtml(block, false)}
+                        </div>
+                        <button onclick="app.removeBlock('${block.id}')" class="w-9 h-9 rounded-full bg-red-50 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white absolute right-4 shadow-md shrink-0">
+                            <i class="fas fa-trash-alt text-sm"></i>
+                        </button>
+                    `;
                     container.appendChild(blockEl);
                 });
             },
@@ -564,19 +918,38 @@
             renderLiveH5() {
                 document.title = "在线查阅系统";
                 const container = document.getElementById('mobile-live-container');
+                
                 if (this.state.blocks.length === 0) {
-                    container.innerHTML = '<div class="text-center mt-32 text-gray-400 flex flex-col items-center"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><i class="fas fa-box-open text-3xl"></i></div><p class="font-medium">内容未发布或已下线</p></div>';
+                    container.innerHTML = `
+                        <div class="text-center mt-32 text-gray-400 flex flex-col items-center">
+                            <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-5 shadow-inner">
+                                <i class="fas fa-box-open text-4xl text-gray-300"></i>
+                            </div>
+                            <p class="font-medium text-lg text-gray-500">内容尚未发布</p>
+                            <p class="text-sm mt-2">管理员正在加紧配置中，请稍后再试</p>
+                        </div>
+                    `;
                     return;
                 }
-                let html = '<div class="w-full flex justify-center py-4"><div class="w-12 h-1 bg-gray-300 rounded-full"></div></div>';
-                html += '<div class="px-4">';
-                this.state.blocks.forEach(block => { html += this.generateBlockHtml(block, true); });
-                html += '</div>';
                 
-                // 【核心：悬浮的一键批量下载按钮】
+                let html = `
+                    <div class="w-full flex justify-center py-5">
+                        <div class="w-14 h-1.5 bg-gray-300 rounded-full opacity-60"></div>
+                    </div>
+                    <div class="px-4 flex flex-col gap-2">
+                `;
+                
+                this.state.blocks.forEach(block => { 
+                    html += this.generateBlockHtml(block, true); 
+                });
+                
                 html += `
-                    <div class="fixed bottom-0 left-0 w-full p-4 bg-white/80 backdrop-blur-md border-t border-gray-200 z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
-                        <button id="btn-batch-download" onclick="app.downloadAllFiles()" class="w-full max-w-lg mx-auto bg-primary text-white py-3.5 rounded-xl shadow-lg hover:bg-blue-600 transition-all font-semibold flex items-center justify-center text-[15px]">
+                    </div>
+                    <p class="text-center text-xs text-gray-300 mt-8 mb-6 tracking-widest uppercase">THE END</p>
+                    
+                    <!-- 【核心功能】游客端底部安全区与一键打包下载悬浮组件 -->
+                    <div class="fixed bottom-0 left-0 w-full p-4 pb-8 bg-white/85 backdrop-blur-xl border-t border-gray-100 z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.06)]">
+                        <button id="btn-batch-download" onclick="app.downloadAllFiles()" class="w-full max-w-lg mx-auto bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3.5 rounded-xl shadow-[0_4px_15px_rgba(30,144,255,0.3)] hover:shadow-[0_6px_25px_rgba(30,144,255,0.4)] hover:-translate-y-0.5 transition-all font-semibold flex items-center justify-center text-[15px] tracking-wide active:scale-95">
                             <i class="fas fa-cloud-download-alt mr-2 text-lg"></i> 一键打包下载全部内容
                         </button>
                     </div>
@@ -585,20 +958,46 @@
             },
 
             renderQR() {
-                const qrContainer = document.getElementById('qrcode'); qrContainer.innerHTML = '';
-                new QRCode(qrContainer, { text: this.state.liveUrl, width: 200, height: 200, colorDark : "#111827", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.M });
-                setTimeout(() => { const canvas = qrContainer.querySelector('canvas'); if(canvas) { canvas.style.borderRadius = '0.75rem'; canvas.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)'; } }, 50);
+                const qrContainer = document.getElementById('qrcode'); 
+                qrContainer.innerHTML = '';
+                
+                new QRCode(qrContainer, { 
+                    text: this.state.liveUrl, 
+                    width: 200, 
+                    height: 200, 
+                    colorDark : "#111827", 
+                    colorLight : "#ffffff", 
+                    correctLevel : QRCode.CorrectLevel.M 
+                });
+                
+                setTimeout(() => { 
+                    const canvas = qrContainer.querySelector('canvas'); 
+                    if(canvas) { 
+                        canvas.style.borderRadius = '0.75rem'; 
+                        canvas.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)'; 
+                    } 
+                }, 50);
             },
             
             generateShareLink() {
                 navigator.clipboard.writeText(this.state.liveUrl).then(() => {
-                    const btn = event.currentTarget; const oldHtml = btn.innerHTML;
-                    btn.innerHTML = '<i class="fas fa-check mr-2"></i> 已成功复制'; btn.classList.replace('bg-primary', 'bg-green-500');
-                    setTimeout(() => { btn.innerHTML = oldHtml; btn.classList.replace('bg-green-500', 'bg-primary'); }, 2000);
-                }).catch(() => { alert('复制失败，链接为: ' + this.state.liveUrl); });
+                    const btn = event.currentTarget; 
+                    const oldHtml = btn.innerHTML;
+                    
+                    btn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> 已成功复制'; 
+                    btn.classList.replace('bg-primary', 'bg-green-500');
+                    
+                    setTimeout(() => { 
+                        btn.innerHTML = oldHtml; 
+                        btn.classList.replace('bg-green-500', 'bg-primary'); 
+                    }, 2000);
+                }).catch(() => { 
+                    alert('复制失败，请手动复制下方链接: \n\n' + this.state.liveUrl); 
+                });
             }
         };
 
+        // DOM 挂载完毕后启动架构
         document.addEventListener('DOMContentLoaded', () => app.init());
     </script>
 </body>
