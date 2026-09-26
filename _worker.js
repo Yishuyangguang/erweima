@@ -36,24 +36,48 @@ export default {
       }
     }
 
-    // 2. 文件上传接口 (写入 R2)
+    // 2. 文件上传接口 (写入 R2) - 核心修复区
     if (path === '/api/upload' && method === 'POST') {
       if (!checkAuth(request)) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
       try {
-        if (!env.BUCKET) throw new Error("R2 Bucket is not bound");
+        if (!env.BUCKET) throw new Error("R2 储存桶未绑定 (BUCKET 变量缺失)");
+        
         const formData = await request.formData();
         const file = formData.get('file');
-        if (!file) return new Response('No file provided', { status: 400, headers: corsHeaders });
+        if (!file) throw new Error("接收到的文件为空");
         
-        const fileId = Date.now() + '_' + Math.random().toString(36).substring(2, 8) + '_' + file.name;
-        await env.BUCKET.put(fileId, file.stream(), { httpMetadata: { contentType: file.type } });
+        // 文件名安全过滤：去除非法字符，防止路径注入或 R2 解析失败
+        const safeName = file.name.replace(/[^\u4e00-\u9fa5a-zA-Z0-9.\-_]/g, '_');
+        const fileId = Date.now() + '_' + Math.random().toString(36).substring(2, 6) + '_' + safeName;
+        
+        // 核心修复：将 stream() 改为 arrayBuffer() 以兼容所有 CF Workers 运行环境，避免 500 报错
+        const fileBuffer = await file.arrayBuffer();
+        const mimeType = file.type || 'application/octet-stream';
+
+        await env.BUCKET.put(fileId, fileBuffer, { 
+            httpMetadata: { contentType: mimeType } 
+        });
         
         return new Response(JSON.stringify({ 
-          success: true, message: '已上传后台', url: `/r2/${fileId}`, name: file.name, size: file.size 
-        }), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+          success: true, 
+          message: '已上传后台', 
+          url: `/r2/${fileId}`, 
+          name: file.name, // 前端展示依旧用原名
+          size: file.size 
+        }), { 
+            status: 200, 
+            headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        });
+
       } catch (err) {
-        console.error(err);
-        return new Response(JSON.stringify({ success: false, message: '后端存储异常' }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        console.error('Upload Error:', err.message);
+        return new Response(JSON.stringify({ 
+            success: false, 
+            message: `云端异常: ${err.message}` 
+        }), { 
+            status: 500, 
+            headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        });
       }
     }
 
@@ -73,7 +97,7 @@ export default {
       }
     }
 
-    // 4. 全局配置文件读写 (修复 500 核心报错点)
+    // 4. 全局配置文件读写
     if (path === '/api/config') {
       if (method === 'GET') {
         try {
@@ -82,7 +106,6 @@ export default {
           if (!obj) return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders }});
           return new Response(obj.body, { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders }});
         } catch (err) {
-          // 发生任何异常（无数据、未绑定），柔性降级返回空数组，避免前端白屏
           return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders }});
         }
       }
