@@ -67,7 +67,7 @@
 </head>
 <body class="min-h-screen flex flex-col items-center py-8 px-4" id="drop-zone">
 
-    <!-- 顶部导航栏 -->
+    <!-- 顶部导航栏 (彻底删除了AI艺术码入口) -->
     <header class="w-full max-w-[1400px] flex justify-center gap-3 mb-8 flex-wrap admin-only px-4 mx-auto">
         <button onclick="app.setMode('text')" class="nav-btn bg-white px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-gray-600 active-nav">文本</button>
         <button onclick="app.setMode('url')" class="nav-btn bg-white px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-gray-600">网址</button>
@@ -86,7 +86,7 @@
         </button>
     </header>
 
-    <!-- PC端管理工作区 -->
+    <!-- PC端管理工作区 (废除了右边栏，主界面彻底横向延展霸屏) -->
     <main class="w-full max-w-[1100px] flex flex-col gap-8 admin-only px-4 mx-auto">
         
         <!-- 上方输入面板 -->
@@ -109,18 +109,19 @@
                 </div>
             </div>
 
-            <!-- 下方流水线区：一物一码横穿卡片排版 -->
+            <!-- 下方流水线区：一物一码极度压低的单行贯穿排版 -->
             <div class="bg-white rounded-2xl shadow-sm p-8 min-h-[400px]">
                 <div class="flex justify-between items-center mb-8 border-b border-gray-100 pb-5">
                     <div>
                         <h3 class="text-xl font-bold text-gray-800 tracking-wide">当前在线流 <span class="text-sm text-primary ml-2 font-normal">一物一码独立分发</span></h3>
-                        <p class="text-xs text-gray-400 mt-1">每个内容卡片都有专属二维码，扫码仅呈现该内容，互不干扰</p>
+                        <p class="text-xs text-gray-400 mt-1">每个内容都有专属二维码，横排高度极简压缩，分享便捷</p>
                     </div>
                     <button onclick="app.syncToCloud()" class="bg-green-500 text-white px-6 py-2.5 text-sm rounded-lg hover:bg-green-600 transition-all shadow-[0_4px_14px_0_rgba(34,197,94,0.39)] hover:-translate-y-0.5 font-bold tracking-wider">
                         <i class="fas fa-cloud-upload-alt mr-2"></i> 同步至云端
                     </button>
                 </div>
-                <div id="blocks-container" class="flex flex-col gap-6 w-full"></div>
+                <!-- 容器为纵向列表，每张卡片占据一行，极大利用横向空白 -->
+                <div id="blocks-container" class="flex flex-col gap-5 w-full"></div>
             </div>
         </section>
 
@@ -129,7 +130,7 @@
     <!-- H5 游客实时预览容器 -->
     <div id="mobile-live-container" class="hidden w-full max-w-lg mx-auto bg-gray-50 min-h-screen pb-safe"></div>
 
-    <!-- 全屏图文组合编辑器 -->
+    <!-- 全屏图文组合编辑器 (富文本功能完美保留无损) -->
     <div id="combo-editor-modal" class="fixed inset-0 bg-gray-100 z-[150] hidden flex-col">
         <div class="h-16 bg-white shadow-sm flex items-center justify-between px-6 border-b shrink-0">
             <h2 class="text-lg font-bold text-gray-800">
@@ -265,9 +266,19 @@
                 audio: { icon: 'fa-music', title: '添加独立音频', hint: '在线流畅播放', accept: 'audio/*' },
                 video: { icon: 'fa-video', title: '添加独立视频', hint: '原生UI沉浸式播放', accept: 'video/*' },
                 document: { icon: 'fa-file-word', title: '添加独立文档', hint: '支持 PPT/Word 跨设备在线预览', accept: '.doc,.docx,.ppt,.pptx,.xls,.xlsx,.pdf,.wps' },
-                form: { icon: 'fa-table', title: '上传表单', hint: '支持直接上传编辑好的表格文件 (Excel/CSV等)', accept: '.xls,.xlsx,.csv,.doc,.docx,.pdf' },
+                form: { icon: 'fa-list-check', title: '添加表单', hint: '复用高级表单模板库', accept: null },
                 uploaded: { icon: 'fa-cloud', title: '后台资源池', hint: '可查阅/清理所有已上传资产', accept: null }
             },
+
+            // 完美保留的表单模板库引擎 
+            formTemplates: [
+                { icon: 'fa-id-badge', color: 'text-blue-500', title: '来访登记', desc: '包含字段：姓名、手机、受访人姓名、来访事由' },
+                { icon: 'fa-book-open', color: 'text-green-500', title: '课程报名表', desc: '包含字段：姓名、手机、课程' },
+                { icon: 'fa-comment-alt', color: 'text-orange-400', title: '意见反馈表', desc: '包含字段：意见类型、反馈描述、图片附件' },
+                { icon: 'fa-calendar-check', color: 'text-teal-400', title: '会议签到', desc: '只能在现场扫码填表' },
+                { icon: 'fa-hard-hat', color: 'text-orange-500', title: '设备巡检单', desc: '包含字段：检查结果、巡检记录、现场照片' },
+                { icon: 'fa-star', color: 'text-emerald-500', title: '服务评价', desc: '包含字段：服务窗口、评分、意见建议' }
+            ],
 
             async init() {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -279,6 +290,7 @@
                     document.getElementById('tourist-mask').classList.add('hidden');
                     await this.fetchCloudConfig();
                     
+                    // 强制对象显式调用，修复在 http 访问或特定浏览器下由于作用域引发的不可预见报错
                     app.renderLiveH5();
                     return;
                 }
@@ -312,7 +324,7 @@
                         document.getElementById('login-modal').classList.add('hidden');
                         this.enableAdminMode();
                     } else {
-                        alert('⚠️ 鉴权失败：密码错误，请检查您的设置。');
+                        alert('⚠️ 鉴权失败：密码错误，请检查您的 CF 环境变量。');
                     }
                 } catch (e) { 
                     alert('后端连接异常，请确认 CF Pages 部署状态'); 
@@ -357,7 +369,7 @@
                 document.getElementById('tourist-mask').classList.remove('hidden');
             },
 
-            // ================= 云端通讯引擎 =================
+            // ================= 云端通讯引擎 (R2 接口) =================
             async fetchCloudConfig() {
                 try {
                     const res = await fetch('/api/config');
@@ -384,7 +396,7 @@
                         body: JSON.stringify(this.state.blocks) 
                     });
                     if (res.ok) {
-                        alert('🚀 全局流水线同步成功！您的二维码活码已全域生效。');
+                        alert('🚀 全局流水线同步成功！您的所有资源活码已全域生效。');
                     } else {
                         alert('发布失败，请检查网络');
                     }
@@ -607,7 +619,7 @@
                 }, false);
             },
 
-            // ================= 游客端 针对单个文件的一键打包下载 =================
+            // ================= 游客端 针对单个文件的一键极速打包下载 =================
             async downloadAllFiles() {
                 const urlParams = new URLSearchParams(window.location.search);
                 const blockId = urlParams.get('id');
@@ -772,7 +784,7 @@
                 
                 const results = await this.uploadFilesConcurrent(files, (percent) => {
                     const statusText = document.getElementById('combo-upload-status');
-                    if (statusText) statusText.innerText = `极速上传中: ${percent}%`;
+                    if (statusText) statusText.innerText = `极速网络上传中: ${percent}%`;
                 });
                 
                 results.forEach(res => {
@@ -887,7 +899,7 @@
                 this.closeComboEditor();
             },
 
-            // ================= 基础UI与路由管理引擎 =================
+            // ================= 基础UI与路由管理引擎 (已找回高级表单模板库功能) =================
             setMode(mode) { 
                 this.state.currentMode = mode; 
                 this.updateNavUI(); 
@@ -917,6 +929,7 @@
                 const panelHeader = document.getElementById('panel-header');
                 const footerAction = document.getElementById('panel-footer-action');
                 
+                // 隐藏表单界面的原生 Header，为高级UI让路
                 if (panelHeader) {
                     panelHeader.style.display = (this.state.currentMode === 'form' || this.state.currentMode === 'uploaded') ? 'none' : 'flex';
                 }
@@ -966,17 +979,68 @@
                         </div>
                     `;
                 }
-                // 【核心复刻：表单UI完全重建，但只保留上传入口】
+                // 【已全面找回的表单库与 Ai+ 引擎 UI】
                 else if (mode === 'form') {
-                    area.innerHTML = `
-                        <div id="upload-drop-ui" class="relative w-full h-40 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center hover:bg-blue-50 hover:border-primary transition-all group cursor-pointer">
-                            <input type="file" accept="${cfg.accept}" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="app.handleMainFileSelect(event)">
-                            <i class="fas fa-file-excel text-5xl text-gray-300 mb-3 group-hover:text-green-500 transition-colors"></i>
-                            <p class="text-base text-gray-500 font-medium">点击或将编辑好的<span class="text-green-500 mx-1">表格/表单文件</span>直接拖拽到这里极速上传</p>
+                    const templatesHtml = this.formTemplates.map((tpl, i) => `
+                        <div onclick="app.addFormTemplate(${i})" class="bg-white border border-gray-100 shadow-sm rounded-xl p-5 flex items-start gap-4 cursor-pointer hover:shadow-[0_4px_15px_rgba(30,144,255,0.15)] hover:border-primary transition-all group">
+                            <div class="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center shrink-0 group-hover:bg-blue-50 transition-colors border border-gray-100">
+                                <i class="fas ${tpl.icon} text-2xl ${tpl.color}"></i>
+                            </div>
+                            <div class="flex flex-col flex-1">
+                                <h4 class="font-bold text-gray-800 text-[15px] mb-1.5 group-hover:text-primary transition-colors">${tpl.title}</h4>
+                                <p class="text-[12px] text-gray-500 leading-relaxed line-clamp-2">${tpl.desc}</p>
+                            </div>
                         </div>
-                        <div id="upload-progress-ui" class="hidden w-full h-40 bg-blue-50/50 rounded-2xl border-2 border-primary flex flex-col items-center justify-center shadow-inner">
-                            <i class="fas fa-spinner fa-spin text-4xl text-primary mb-3"></i>
-                            <span id="upload-status-text" class="text-primary font-black text-base tracking-widest">排队就绪中...</span>
+                    `).join('');
+
+                    area.innerHTML = `
+                        <div class="w-full flex flex-col items-center pt-2">
+                            <h3 class="text-[22px] font-black text-gray-800 mb-8 tracking-wide">表单二维码生成器，扫码即可填写表单，方便快捷</h3>
+
+                            <div class="grid grid-cols-2 lg:grid-cols-4 gap-5 w-full mb-12">
+                                <div onclick="app.addBlankForm()" class="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-center cursor-pointer hover:border-primary hover:shadow-md transition-all group shadow-sm h-20">
+                                    <div class="w-10 h-10 rounded-full bg-blue-50 text-primary flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                                        <i class="fas fa-plus text-lg"></i>
+                                    </div>
+                                    <span class="font-bold text-gray-700 text-[15px]">新建空白表单</span>
+                                </div>
+                                <div onclick="alert('AI一句话生成功能即将上线')" class="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-center cursor-pointer hover:border-green-500 hover:shadow-md transition-all relative overflow-hidden group shadow-sm h-20">
+                                    <span class="absolute top-1 right-2.5 text-indigo-500 text-[10px] font-black italic">Ai⁺</span>
+                                    <div class="w-10 h-10 rounded-full bg-green-50 text-green-500 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                                        <i class="fas fa-comment-dots text-lg"></i>
+                                    </div>
+                                    <span class="font-bold text-gray-700 text-[15px]">一句话生成表单</span>
+                                </div>
+                                <div onclick="alert('AI图片识别功能即将上线')" class="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-center cursor-pointer hover:border-emerald-500 hover:shadow-md transition-all relative overflow-hidden group shadow-sm h-20">
+                                    <span class="absolute top-1 right-2.5 text-indigo-500 text-[10px] font-black italic">Ai⁺</span>
+                                    <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                                        <i class="fas fa-image text-lg"></i>
+                                    </div>
+                                    <span class="font-bold text-gray-700 text-[15px]">上传图片生成表单</span>
+                                </div>
+                                <div onclick="alert('AI文件识别功能即将上线')" class="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-center cursor-pointer hover:border-orange-500 hover:shadow-md transition-all relative overflow-hidden group shadow-sm h-20">
+                                    <span class="absolute top-1 right-2.5 text-indigo-500 text-[10px] font-black italic">Ai⁺</span>
+                                    <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                                        <i class="fas fa-file-upload text-lg"></i>
+                                    </div>
+                                    <span class="font-bold text-gray-700 text-[15px]">上传文件生成表单</span>
+                                </div>
+                            </div>
+
+                            <h3 class="text-xl font-bold text-gray-800 mb-6 tracking-wide">表单模板库，可快速复用，按需修改</h3>
+
+                            <div class="flex flex-wrap justify-center gap-3 mb-8 w-full max-w-4xl">
+                                <span class="px-6 py-2 bg-primary text-white rounded-full text-sm font-bold cursor-pointer shadow-md">推荐</span>
+                                <span class="px-6 py-2 bg-white border border-gray-200 text-gray-600 hover:text-primary hover:border-primary rounded-full text-sm font-bold cursor-pointer transition-colors shadow-sm">出入登记</span>
+                                <span class="px-6 py-2 bg-white border border-gray-200 text-gray-600 hover:text-primary hover:border-primary rounded-full text-sm font-bold cursor-pointer transition-colors shadow-sm">物品登记</span>
+                                <span class="px-6 py-2 bg-white border border-gray-200 text-gray-600 hover:text-primary hover:border-primary rounded-full text-sm font-bold cursor-pointer transition-colors shadow-sm">签到预约</span>
+                                <span class="px-6 py-2 bg-white border border-gray-200 text-gray-600 hover:text-primary hover:border-primary rounded-full text-sm font-bold cursor-pointer transition-colors shadow-sm">意见反馈</span>
+                                <span class="px-6 py-2 bg-white border border-gray-200 text-gray-600 hover:text-primary hover:border-primary rounded-full text-sm font-bold cursor-pointer transition-colors shadow-sm">产品维保</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full">
+                                ${templatesHtml}
+                            </div>
                         </div>
                     `;
                 } else if (mode === 'uploaded') {
@@ -1052,11 +1116,6 @@
                             type = 'video';
                         }
                         
-                        // 【强制表单归类】
-                        if (this.state.currentMode === 'form') {
-                            type = 'form';
-                        }
-                        
                         this.addBlockToState(type, { 
                             url: res.data.url, 
                             name: res.data.name, 
@@ -1094,6 +1153,15 @@
                     }
                 }
             },
+
+            // 表单专属直接派发器 (已恢复)
+            addBlankForm() {
+                this.addBlockToState('form', { title: '未命名空白表单', desc: '请在后台进一步配置详细字段' });
+            },
+            addFormTemplate(index) {
+                const tpl = this.formTemplates[index];
+                this.addBlockToState('form', { title: tpl.title, desc: tpl.desc });
+            },
             
             addBlockToState(type, content) {
                 this.state.blocks.push({ id: 'block_' + Date.now() + Math.floor(Math.random()*100), type: type, content: content });
@@ -1130,7 +1198,7 @@
                 let inner = '';
                 if (ext === 'pdf') {
                     inner = `<iframe src="${url}" class="w-full h-full border-none"></iframe>`;
-                } else if (['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'csv'].includes(ext)) {
+                } else if (['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) {
                     inner = `<iframe src="https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(absoluteUrl)}" class="w-full h-full border-none bg-white"></iframe>`;
                 } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
                     inner = `<img src="${url}" class="max-w-full max-h-full object-contain">`;
@@ -1206,13 +1274,22 @@
                         html = `<div class="${baseClass} flex items-center bg-gray-50 rounded-2xl p-5 hover:bg-white transition-colors border border-gray-100"><div class="w-14 h-14 bg-white shadow-sm text-red-500 rounded-xl flex items-center justify-center mr-4 shrink-0 border border-gray-100"><i class="fas fa-file-pdf text-3xl"></i></div><div class="flex flex-col flex-1 overflow-hidden mr-4"><span class="text-[15px] font-bold text-gray-800 truncate">${block.content.name}</span><span class="text-xs text-gray-400 mt-1.5 font-medium">${block.content.size} · 点击右侧全屏预览</span></div><div class="flex flex-col gap-2.5 shrink-0"><button onclick="app.openDocumentPreview('${block.content.url}', '${block.content.name}')" class="text-xs bg-gray-200 px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-300 font-bold transition-all shadow-sm">全屏查看</button><a href="${block.content.url}" download class="text-xs bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-center font-bold shadow-md"><i class="fas fa-download mr-1"></i>下载</a></div></div>`; 
                         break;
                     case 'form': 
-                        html = `<div class="${baseClass} flex items-center bg-gray-50 rounded-2xl p-5 hover:bg-white transition-colors border border-gray-100"><div class="w-14 h-14 bg-white shadow-sm text-green-500 rounded-xl flex items-center justify-center mr-4 shrink-0 border border-gray-100"><i class="fas fa-file-excel text-3xl"></i></div><div class="flex flex-col flex-1 overflow-hidden mr-4"><span class="text-[15px] font-bold text-gray-800 truncate">${block.content.name}</span><span class="text-xs text-gray-400 mt-1.5 font-medium">${block.content.size} · 扫码提取或直接下载表格</span></div><div class="flex flex-col gap-2.5 shrink-0"><button onclick="app.openDocumentPreview('${block.content.url}', '${block.content.name}')" class="text-xs bg-gray-200 px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-300 font-bold transition-all shadow-sm">表格预览</button><a href="${block.content.url}" download class="text-xs bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-center font-bold shadow-md"><i class="fas fa-download mr-1"></i>下载</a></div></div>`; 
+                        html = `
+                            <div class="${baseClass} border-2 border-dashed border-indigo-200 bg-indigo-50/40 p-8 relative overflow-hidden rounded-2xl">
+                                <div class="absolute -right-8 -top-8 w-32 h-32 bg-indigo-100 rounded-full opacity-40"></div>
+                                <h4 class="font-black text-indigo-900 mb-2 text-center text-xl relative z-10 tracking-wide">${this.escapeHtml(block.content.title)}</h4>
+                                ${block.content.desc ? `<p class="text-indigo-600 text-[13px] text-center mb-6 relative z-10 font-medium">${this.escapeHtml(block.content.desc)}</p>` : '<div class="mb-6"></div>'}
+                                <input type="text" placeholder="您的姓名" class="w-full p-3.5 mb-4 border border-white rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-indigo-300 text-[15px] font-medium relative z-10">
+                                <input type="tel" placeholder="联系方式" class="w-full p-3.5 mb-6 border border-white rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-indigo-300 text-[15px] font-medium relative z-10">
+                                <button class="w-full bg-indigo-500 text-white py-3.5 rounded-xl shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] hover:bg-indigo-600 hover:-translate-y-0.5 transition-all font-bold text-lg relative z-10 tracking-widest">安全提交数据</button>
+                            </div>
+                        `; 
                         break;
                 }
                 return html;
             },
 
-            // ================= 核心渲染：【终极压缩】单行横铺排版 =================
+            // ================= 核心重构：【终极压迫版】单排横贯极简卡片展示 =================
             renderBlocks() {
                 const container = document.getElementById('blocks-container');
                 if (!container) return;
@@ -1232,8 +1309,8 @@
                 this.state.blocks.forEach((block, index) => {
                     const blockEl = document.createElement('div');
                     blockEl.draggable = true;
-                    // 【绝对横铺】取消拉高，限制内容在 96px 内极其紧凑的铺开
-                    blockEl.className = 'block-animate bg-white border border-gray-100 rounded-[16px] p-3 flex flex-row items-center group relative shadow-sm hover:shadow-md transition-all h-[96px] border-l-[4px] border-l-primary cursor-move w-full overflow-hidden';
+                    // 【绝对横向极限压扁】：强制去除 flex-col 和冗余高度，锁定在约 96px 内极度贴合
+                    blockEl.className = 'block-animate bg-white border border-gray-100 rounded-[16px] p-3 flex flex-row items-center group relative shadow-sm hover:shadow-md transition-all h-[96px] border-l-[4px] border-l-primary cursor-move w-full';
                     
                     blockEl.ondragstart = (e) => this.handleMainDragStart(e, index); 
                     blockEl.ondragover = (e) => this.handleMainDragOver(e); 
@@ -1244,6 +1321,7 @@
                     const isStaticUrl = block.type === 'url' && typeof block.content === 'object' && block.content.isStatic;
                     const urlString = isStaticUrl ? block.content.url : block.content;
                     
+                    // 摘要提取（单行强力截断防撑高）
                     switch(block.type) {
                         case 'text': icon='fa-font text-blue-500'; title='文本段落'; descHtml = `<div class="text-[12px] text-gray-500 mt-1 truncate font-medium w-full">${this.escapeHtml(block.content)}</div>`; break;
                         case 'url': icon='fa-link text-blue-500'; title=isStaticUrl ? '静态直达链接' : '动态活码链接'; descHtml = `<div class="text-[12px] text-blue-400 mt-1 truncate font-medium w-full">${this.escapeHtml(urlString)}</div>`; break;
@@ -1251,8 +1329,7 @@
                         case 'audio': icon='fa-music text-yellow-500'; title='音频文件'; descHtml = `<div class="text-[12px] text-gray-500 mt-1 truncate font-medium w-full">${this.escapeHtml(block.content.name)}</div>`; break;
                         case 'video': icon='fa-video text-purple-500'; title='视频文件'; descHtml = `<div class="text-[12px] text-gray-500 mt-1 truncate font-medium w-full">${this.escapeHtml(block.content.name)}</div>`; break;
                         case 'document': icon='fa-file-pdf text-red-500'; title='文档附件'; descHtml = `<div class="text-[12px] text-gray-500 mt-1 truncate font-medium w-full">${this.escapeHtml(block.content.name)}</div>`; break;
-                        // 数据表单也变更为 Excel 样式的文件直接呈现
-                        case 'form': icon='fa-file-excel text-green-500'; title='数据表单'; descHtml = `<div class="text-[12px] text-gray-500 mt-1 truncate font-medium w-full">${this.escapeHtml(block.content.name)}</div>`; break;
+                        case 'form': icon='fa-list-check text-indigo-500'; title='数据表单'; descHtml = `<div class="text-[12px] text-gray-500 mt-1 truncate font-medium w-full">${this.escapeHtml(block.content.title)}</div>`; break;
                         case 'combo': icon='fa-cubes text-primary'; title=block.content.title || '图文组合'; let itemsCount = block.content.items ? block.content.items.length : 0; let textPreview = block.content.text ? this.stripHtml(block.content.text) : '';
                             descHtml = `<div class="flex items-center gap-2 mt-1 w-full overflow-hidden"><span class="text-[12px] text-gray-500 truncate flex-1">${textPreview || '无文字内容'}</span><span class="inline-block font-bold text-primary bg-blue-50 px-1.5 py-0.5 rounded text-[10px] shrink-0">包含 ${itemsCount} 媒体</span></div>`; break;
                     }
@@ -1260,9 +1337,9 @@
                     let targetUrl = this.state.liveUrl + '?view=live&id=' + block.id;
                     if (isStaticUrl) targetUrl = urlString;
 
-                    // 【终极呈现：强力横排压缩版面，右上角悬浮红叉】
+                    // 【横排终极渲染】：左（延展标题）- 中（纯净微码）- 右（扁平按键），彻底抹平卡片高度！
                     blockEl.innerHTML = `
-                        <!-- 左侧：图标与标题摘要，吃尽空余宽度 -->
+                        <!-- 左侧：图标与标题摘要，吃掉所有闲余空间 -->
                         <div class="flex items-center gap-4 flex-1 min-w-0 h-full pl-2 pr-6 border-r border-gray-50">
                             <div class="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100 shadow-inner">
                                 <i class="fas ${icon} text-xl"></i>
@@ -1273,28 +1350,29 @@
                             </div>
                         </div>
                         
-                        <!-- 中间：独立的无框微型二维码 -->
-                        <div class="shrink-0 flex items-center justify-center bg-white border border-gray-100 rounded-lg p-1 shadow-sm mr-4" onmousedown="event.stopPropagation();">
+                        <!-- 中间：剥离冗余底框的纯净极简微型二维码 -->
+                        <div class="shrink-0 flex items-center justify-center bg-white border border-gray-100 rounded-lg p-1 shadow-sm mx-4" onmousedown="event.stopPropagation();">
                             <div id="qrcode-${block.id}" class="w-[64px] h-[64px]"></div>
                         </div>
                         
-                        <!-- 右侧：极其紧凑的按键控制台 -->
+                        <!-- 右侧：极其紧凑的文字与并列扁平按键 -->
                         <div class="shrink-0 flex flex-col justify-center gap-1.5 w-[140px] pr-2 h-full" onmousedown="event.stopPropagation();">
                             <p class="text-[9px] text-gray-400 text-center leading-tight tracking-wide font-medium">扫码查看此内容<br>(一物一码分发)</p>
                             <div class="flex gap-1.5 w-full">
-                                <button onclick="app.copyBlockLink(event, '${block.id}', ${isStaticUrl}, '${urlString}')" class="flex-1 bg-blue-50 text-blue-500 border border-blue-100 py-1 rounded-[6px] hover:bg-blue-500 hover:text-white transition-all text-[11px] font-bold shadow-sm">复制</button>
-                                <button onclick="app.downloadBlockQR('${block.id}')" class="flex-1 bg-gray-50 text-gray-600 border border-gray-200 py-1 rounded-[6px] hover:bg-gray-100 transition-all text-[11px] font-bold shadow-sm">下载</button>
+                                <button onclick="app.copyBlockLink(event, '${block.id}', ${isStaticUrl}, '${urlString}')" class="flex-1 bg-blue-50 text-blue-500 border border-blue-100 py-1 rounded-[6px] hover:bg-blue-500 hover:text-white transition-all text-[11px] font-bold shadow-sm flex items-center justify-center">复制</button>
+                                <button onclick="app.downloadBlockQR('${block.id}')" class="flex-1 bg-gray-50 text-gray-600 border border-gray-200 py-1 rounded-[6px] hover:bg-gray-100 transition-all text-[11px] font-bold shadow-sm flex items-center justify-center">下载</button>
                             </div>
                         </div>
                         
-                        <!-- 【重要修复：悬浮红叉】绝对定位右上角，彻底美观清晰 -->
-                        <button onclick="app.removeBlock('${block.id}')" class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center transition-transform hover:scale-110 shadow-md border-2 border-white z-10">
+                        <!-- 悬浮红叉关闭按钮，完全浮空展现 -->
+                        <button onclick="app.removeBlock('${block.id}')" class="absolute -top-2.5 -right-2.5 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center transition-transform hover:scale-110 shadow-md border-2 border-white z-20 opacity-0 group-hover:opacity-100">
                             <i class="fas fa-times text-[10px] font-bold"></i>
                         </button>
                     `;
                     container.appendChild(blockEl);
                 });
 
+                // 静默无阻塞渲染超清微缩小码
                 setTimeout(() => {
                     this.state.blocks.forEach(block => {
                         const isStaticUrl = block.type === 'url' && typeof block.content === 'object' && block.content.isStatic;
@@ -1316,51 +1394,94 @@
                 }, 100);
             },
 
-            handleMainDragStart(e, index) { this.state.draggedMainIndex = index; e.dataTransfer.effectAllowed = "move"; e.target.classList.add('sortable-ghost'); },
-            handleMainDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; },
+            // ================= 发布流原生 H5 拖拽支持 =================
+            handleMainDragStart(e, index) { 
+                this.state.draggedMainIndex = index; 
+                e.dataTransfer.effectAllowed = "move"; 
+                e.target.classList.add('sortable-ghost'); 
+            },
+            handleMainDragOver(e) { 
+                e.preventDefault(); 
+                e.dataTransfer.dropEffect = "move"; 
+            },
             handleMainDrop(e, targetIndex) {
-                e.preventDefault(); const sourceIndex = this.state.draggedMainIndex;
+                e.preventDefault(); 
+                const sourceIndex = this.state.draggedMainIndex;
                 if (sourceIndex !== null && sourceIndex !== targetIndex) {
-                    const blocks = this.state.blocks; const [removed] = blocks.splice(sourceIndex, 1); blocks.splice(targetIndex, 0, removed); this.renderBlocks();
+                    const blocks = this.state.blocks; 
+                    const [removed] = blocks.splice(sourceIndex, 1); 
+                    blocks.splice(targetIndex, 0, removed); 
+                    this.renderBlocks();
                 }
             },
-            handleMainDragEnd(e) { e.target.classList.remove('sortable-ghost'); this.state.draggedMainIndex = null; },
+            handleMainDragEnd(e) { 
+                e.target.classList.remove('sortable-ghost'); 
+                this.state.draggedMainIndex = null; 
+            },
 
+            // 独立模块专属功能支持
             downloadBlockQR(blockId) {
                 const canvas = document.querySelector(`#qrcode-${blockId} canvas`);
-                if(!canvas) return alert('二维码尚未生成完毕');
-                const url = canvas.toDataURL("image/png"); const a = document.createElement('a'); a.download = `专属活码_${blockId}_${new Date().getTime()}.png`; a.href = url; a.click();
+                if(!canvas) return alert('专属二维码生成中，请稍候');
+                
+                const url = canvas.toDataURL("image/png");
+                const a = document.createElement('a');
+                a.download = `专属活码_${blockId}_${new Date().getTime()}.png`;
+                a.href = url;
+                a.click();
             },
             
-            // 安全防报错复制功能 (解决 HTTP 无 HTTPS 环境下引发抛错的底层暗病)
+            // 安全防抛错剪贴板
             copyBlockLink(e, blockId, isStatic, rawUrl) {
                 let linkToCopy = this.state.liveUrl + '?view=live&id=' + blockId;
-                if (isStatic) linkToCopy = rawUrl;
+                if (isStatic) {
+                    linkToCopy = rawUrl;
+                }
                 
-                const btn = e.currentTarget; const oldHtml = btn.innerHTML;
-                const successFeedback = () => {
-                    btn.innerHTML = '<i class="fas fa-check text-[12px]"></i>';
-                    btn.classList.add('bg-green-500', 'text-white', 'border-transparent');
-                    btn.classList.remove('bg-blue-50', 'text-blue-500', 'border-blue-100');
-                    setTimeout(() => {
-                        btn.innerHTML = oldHtml;
-                        btn.classList.remove('bg-green-500', 'text-white', 'border-transparent');
-                        btn.classList.add('bg-blue-50', 'text-blue-500', 'border-blue-100');
+                const btn = e.currentTarget; 
+                const oldHtml = btn.innerHTML;
+
+                const successUI = () => {
+                    btn.innerHTML = '<i class="fas fa-check"></i>'; 
+                    btn.classList.replace('text-blue-500', 'text-white'); 
+                    btn.classList.replace('bg-blue-50', 'bg-green-500');
+                    btn.classList.replace('border-blue-100', 'border-green-500');
+                    setTimeout(() => { 
+                        btn.innerHTML = oldHtml; 
+                        btn.classList.replace('text-white', 'text-blue-500'); 
+                        btn.classList.replace('bg-green-500', 'bg-blue-50');
+                        btn.classList.replace('border-green-500', 'border-blue-100');
                     }, 2000);
                 };
 
                 if (navigator.clipboard && window.isSecureContext) {
-                    navigator.clipboard.writeText(linkToCopy).then(successFeedback).catch(() => this.fallbackCopy(linkToCopy, successFeedback));
-                } else this.fallbackCopy(linkToCopy, successFeedback);
+                    navigator.clipboard.writeText(linkToCopy).then(successUI).catch(() => {
+                        this.fallbackCopy(linkToCopy, successUI);
+                    });
+                } else {
+                    this.fallbackCopy(linkToCopy, successUI);
+                }
             },
+
             fallbackCopy(text, successCallback) {
-                const textArea = document.createElement("textarea"); textArea.value = text;
-                textArea.style.position = "fixed"; textArea.style.left = "-999999px"; textArea.style.top = "-999999px"; document.body.appendChild(textArea);
-                textArea.focus(); textArea.select();
-                try { document.execCommand('copy'); successCallback(); } catch (err) {}
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                textArea.style.top = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    successCallback();
+                } catch (err) {
+                    alert('复制失败，请手动复制链接:\n\n' + text);
+                }
                 document.body.removeChild(textArea);
             },
 
+            // 完美规避缓存无函数报错，且精准实现智能 H5 拦截
             renderLiveH5() {
                 document.title = "在线查阅系统";
                 const container = document.getElementById('mobile-live-container');
@@ -1368,25 +1489,49 @@
                 const blockId = urlParams.get('id');
                 
                 let targetBlocks = this.state.blocks;
-                if (blockId) targetBlocks = this.state.blocks.filter(b => b.id === blockId);
+                if (blockId) {
+                    targetBlocks = this.state.blocks.filter(b => b.id === blockId);
+                }
 
                 if (targetBlocks.length === 0) {
-                    container.innerHTML = `<div class="text-center mt-32 text-gray-400 flex flex-col items-center"><div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6 shadow-inner"><i class="fas fa-link-slash text-5xl text-gray-300"></i></div><p class="font-black text-xl text-gray-600 tracking-widest">内容已失效或不存在</p></div>`; return;
+                    container.innerHTML = `
+                        <div class="text-center mt-32 text-gray-400 flex flex-col items-center">
+                            <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                                <i class="fas fa-link-slash text-5xl text-gray-300"></i>
+                            </div>
+                            <p class="font-black text-xl text-gray-600 tracking-widest">内容已失效或不存在</p>
+                            <p class="text-sm mt-3 font-medium">管理员可能已下线该资源文件</p>
+                        </div>
+                    `;
+                    return;
                 }
                 
-                let html = `<div class="w-full flex justify-center py-5"><div class="w-14 h-1.5 bg-gray-300 rounded-full opacity-60"></div></div><div class="px-4 flex flex-col gap-5">`;
-                targetBlocks.forEach(block => { html += this.generateBlockHtml(block, true); });
-                html += `</div><p class="text-center text-xs text-gray-300 mt-10 mb-8 tracking-widest uppercase font-bold">THE END</p>
+                let html = `
+                    <div class="w-full flex justify-center py-5">
+                        <div class="w-14 h-1.5 bg-gray-300 rounded-full opacity-60"></div>
+                    </div>
+                    <div class="px-4 flex flex-col gap-5">
+                `;
+                
+                targetBlocks.forEach(block => { 
+                    html += this.generateBlockHtml(block, true); 
+                });
+                
+                html += `
+                    </div>
+                    <p class="text-center text-xs text-gray-300 mt-10 mb-8 tracking-widest uppercase font-bold">THE END</p>
+                    
                     <div class="fixed bottom-0 left-0 w-full p-4 pb-8 bg-white/90 backdrop-blur-2xl border-t border-gray-100 z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.06)]">
                         <button id="btn-batch-download" onclick="app.downloadAllFiles()" class="w-full max-w-lg mx-auto bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-4 rounded-2xl shadow-[0_6px_20px_rgba(30,144,255,0.35)] hover:shadow-[0_8px_30px_rgba(30,144,255,0.45)] hover:-translate-y-1 transition-all font-bold flex items-center justify-center text-[16px] tracking-wide active:scale-95">
                             <i class="fas fa-cloud-download-alt mr-2.5 text-xl"></i> 一键极速下载查阅资源
                         </button>
-                    </div>`;
+                    </div>
+                `;
                 container.innerHTML = html;
             }
         };
 
-        // 挂载引擎
+        // 强力挂载确保不漏过上下文
         document.addEventListener('DOMContentLoaded', () => app.init());
     </script>
 </body>
