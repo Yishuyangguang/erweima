@@ -124,9 +124,17 @@
                         <h3 class="text-xl font-bold text-gray-800 tracking-wide">当前在线流 <span class="text-sm text-primary ml-2 font-normal">一物一码独立分发</span></h3>
                         <p class="text-xs text-gray-400 mt-1">每个内容都有专属二维码，横排高度极简压缩，分享便捷</p>
                     </div>
-                    <button onclick="app.syncToCloud()" class="bg-green-500 text-white px-6 py-2.5 text-sm rounded-lg hover:bg-green-600 transition-all shadow-[0_4px_14px_0_rgba(34,197,94,0.39)] hover:-translate-y-0.5 font-bold tracking-wider">
-                        <i class="fas fa-cloud-upload-alt mr-2"></i> 同步至云端
-                    </button>
+                    <div class="flex items-center gap-4">
+                        <!-- 新增：查看数据按钮 (点击会在新标签页打开 stats.html) -->
+                        <a href="stats.html" target="_blank" class="bg-white border border-gray-200 text-gray-700 px-6 py-2.5 text-sm rounded-lg hover:border-primary hover:text-primary transition-all shadow-sm hover:-translate-y-0.5 font-bold tracking-wider flex items-center">
+                            <i class="fas fa-chart-pie mr-2"></i> 查看数据
+                        </a>
+    
+                        <!-- 原有的：同步至云端按钮 -->
+                        <button onclick="app.syncToCloud()" class="bg-green-500 text-white px-6 py-2.5 text-sm rounded-lg hover:bg-green-600 transition-all shadow-[0_4px_14px_0_rgba(34,197,94,0.39)] hover:-translate-y-0.5 font-bold tracking-wider flex items-center">
+                            <i class="fas fa-cloud-upload-alt mr-2"></i> 同步至云端
+                        </button>
+                    </div>
                 </div>
                 <!-- 容器为纵向列表，每张卡片横向展开贯穿 -->
                 <div id="blocks-container" class="flex flex-col gap-5 w-full"></div>
