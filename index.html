@@ -86,11 +86,11 @@
         </button>
     </header>
 
-    <!-- PC端管理工作区 (升级为5列网格，极致扩容：左4右1) -->
-    <main class="w-full max-w-[1400px] grid grid-cols-1 lg:grid-cols-5 gap-8 admin-only px-4">
+    <!-- PC端管理工作区 (核心修改：采用 Flex 强制锁定右侧极限宽度，左侧无限霸屏) -->
+    <main class="w-full max-w-[1400px] flex flex-col lg:flex-row gap-8 admin-only px-4">
         
-        <!-- 左侧编辑/任务区域占据 4/5 (80%) 空间 -->
-        <section class="lg:col-span-4 flex flex-col gap-6 relative">
+        <!-- 左侧编辑/任务区域占据绝对主导权 -->
+        <section class="flex-1 min-w-0 flex flex-col gap-6 relative">
             <div id="input-panel" class="bg-white rounded-2xl shadow-sm p-8 relative border-2 border-dashed border-transparent transition-all">
                 <div class="flex justify-between items-center mb-6" id="panel-header">
                     <h2 id="panel-title" class="text-xl font-bold text-gray-800 tracking-wide">
@@ -107,7 +107,7 @@
                 </div>
             </div>
 
-            <!-- 当前在线流 (卡片化网格排版) -->
+            <!-- 当前在线流 (卡片化网格排版：卡片已放大，取消截断) -->
             <div class="bg-white rounded-2xl shadow-sm p-8 min-h-[350px]">
                 <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
                     <h3 class="text-lg font-bold text-gray-800">当前在线流 (扫码可见)</h3>
@@ -115,30 +115,28 @@
                         <i class="fas fa-rotate mr-1.5"></i> 发布至前端
                     </button>
                 </div>
-                <!-- 改用 grid 并且两列排列，形成对称卡片 -->
-                <div id="blocks-container" class="grid grid-cols-1 xl:grid-cols-2 gap-5 w-full"></div>
+                <div id="blocks-container" class="grid grid-cols-1 md:grid-cols-2 gap-5 w-full"></div>
             </div>
         </section>
 
-        <!-- 右侧二维码区域占据 1/5 (20%) 空间，极限压缩位置与元素 -->
-        <aside class="w-full flex flex-col gap-4 relative lg:col-span-1">
-            <!-- 压缩 p-6 到 p-5，去除冗余边距 -->
+        <!-- 右侧二维码区域：物理宽度被彻底锁死在 260px，极致紧凑迷你 -->
+        <aside class="w-full lg:w-[260px] flex-shrink-0 flex flex-col gap-4 relative">
             <div class="bg-white rounded-2xl shadow-sm p-5 flex flex-col items-center sticky top-8 border border-gray-50">
                 
-                <!-- 极限收缩二维码边框 -->
-                <div id="qrcode-wrapper" class="w-32 h-32 bg-white flex items-center justify-center rounded-xl mb-3 relative transition-all mt-1 border border-gray-100 p-1.5">
+                <!-- 精巧尺寸二维码容器 -->
+                <div id="qrcode-wrapper" class="w-32 h-32 bg-white flex items-center justify-center rounded-xl mb-3 relative transition-all border border-gray-100 p-1.5">
                     <div id="qrcode" class="z-10 relative flex items-center justify-center w-full h-full"></div>
                 </div>
                 
-                <div id="qr-desc-text" class="text-center mb-5 w-full">
+                <div id="qr-desc-text" class="text-center mb-4 w-full">
                     <p class="text-[13px] text-gray-700 font-bold mb-1">此处扫描活码进入 H5 页面</p>
                     <p class="text-[11px] text-gray-400 leading-tight tracking-wide">(内容修改自动同步，图案不变)</p>
                 </div>
                 
-                <!-- 极简双按钮，挤压在一行 -->
+                <!-- 极简双按钮，压缩在一行并列 -->
                 <div class="flex gap-2 w-full">
                     <button onclick="app.generateShareLink()" class="flex-1 bg-primary text-white py-2 rounded-lg hover:bg-blue-600 shadow-sm transition-all text-[12px] font-semibold flex items-center justify-center">
-                        <i class="fas fa-link mr-1"></i> 复制链接
+                        <i class="fas fa-link mr-1"></i> 复制
                     </button>
                     <button onclick="app.downloadQR()" class="flex-1 bg-white border border-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-50 hover:text-primary transition-all text-[12px] font-semibold flex items-center justify-center shadow-sm">
                         <i class="fas fa-download mr-1"></i> 下载
@@ -238,7 +236,7 @@
         <i class="fas fa-sign-out-alt"></i>
     </button>
 
-    <!-- 管理员登录弹窗 (完美净化版) -->
+    <!-- 管理员登录弹窗 (纯净版，剔除冗余文字) -->
     <div id="login-modal" class="fixed inset-0 bg-black/60 z-[200] hidden flex items-center justify-center backdrop-blur-sm">
         <div class="bg-white rounded-2xl p-8 w-80 shadow-2xl transform transition-all scale-100 relative">
             <h3 class="text-xl font-bold mb-6 text-center text-gray-800">系统鉴权</h3>
@@ -274,10 +272,11 @@
                 liveUrl: window.location.origin + window.location.pathname + '?view=live',
                 comboDraft: { title: '', text: '', items: [] },
                 
+                // 拖拽相关状态记录
                 draggedItemIndex: null,
-                draggedMainIndex: null, // 为发布流新增独立的拖拽指针
-                isLiveMode: false,
+                draggedMainIndex: null,
                 
+                isLiveMode: false,
                 // 网址双轨制状态
                 urlConfig: { mode: 'live', staticUrl: '' }
             },
@@ -1149,7 +1148,7 @@
 
             generateBlockHtml(block, isLive = false) {
                 let html = '';
-                const baseClass = isLive ? 'w-full mb-5 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden' : 'flex-1';
+                const baseClass = isLive ? 'w-full mb-5 bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/50 overflow-hidden' : 'flex-1';
                 
                 if (block.type === 'combo') {
                     const c = block.content; 
@@ -1264,7 +1263,7 @@
                 return html;
             },
 
-            // ================= 核心渲染：发布流降维卡片展示 (完美适配图1) =================
+            // ================= 核心渲染：发布流降维卡片展示 (完美匹配需求：放大卡片/取消截断/提炼信息) =================
             renderBlocks() {
                 const container = document.getElementById('blocks-container');
                 if (!container) return;
@@ -1284,8 +1283,8 @@
                 this.state.blocks.forEach((block, index) => {
                     const blockEl = document.createElement('div');
                     blockEl.draggable = true;
-                    // 彻底解除高度锁死，改用自适应内容，配合左右对称网格
-                    blockEl.className = 'block-animate bg-white border border-gray-100 rounded-2xl p-4 flex flex-col justify-between group relative shadow-sm hover:shadow-md transition-all min-h-[100px] h-auto border-l-4 border-l-primary cursor-move';
+                    // 【解除高度锁死】移除写死的 h-28，改用 min-h-[120px] 自动延展
+                    blockEl.className = 'block-animate bg-white border border-gray-100 rounded-2xl p-5 flex flex-col justify-between group relative shadow-sm hover:shadow-md transition-all min-h-[120px] h-auto border-l-4 border-l-primary cursor-move';
                     
                     blockEl.ondragstart = (e) => this.handleMainDragStart(e, index); 
                     blockEl.ondragover = (e) => this.handleMainDragOver(e); 
@@ -1300,60 +1299,61 @@
                         case 'text': 
                             icon='fa-font text-blue-500'; 
                             title='文本段落'; 
-                            descHtml = `<div class="text-xs text-gray-500 mt-1.5 line-clamp-2 leading-relaxed break-all">${this.escapeHtml(block.content)}</div>`; 
+                            descHtml = `<div class="text-sm text-gray-500 mt-2 line-clamp-3 leading-relaxed break-all">${this.escapeHtml(block.content)}</div>`; 
                             break;
                         case 'url': 
                             icon='fa-link text-blue-500'; 
                             title='网址链接'; 
-                            descHtml = `<div class="text-xs text-blue-400 mt-1.5 truncate">${this.escapeHtml(block.content)}</div>`; 
+                            descHtml = `<div class="text-sm text-blue-400 mt-2 truncate">${this.escapeHtml(block.content)}</div>`; 
                             break;
                         case 'image': 
                             icon='fa-image text-green-500'; 
                             title='图片资源'; 
-                            descHtml = `<div class="text-xs text-gray-500 mt-1.5 truncate">${this.escapeHtml(block.content.name)}</div>`; 
+                            descHtml = `<div class="text-sm text-gray-500 mt-2 truncate">${this.escapeHtml(block.content.name)}</div>`; 
                             break;
                         case 'audio': 
                             icon='fa-music text-yellow-500'; 
                             title='音频文件'; 
-                            descHtml = `<div class="text-xs text-gray-500 mt-1.5 truncate">${this.escapeHtml(block.content.name)}</div>`; 
+                            descHtml = `<div class="text-sm text-gray-500 mt-2 truncate">${this.escapeHtml(block.content.name)}</div>`; 
                             break;
                         case 'video': 
                             icon='fa-video text-purple-500'; 
                             title='视频文件'; 
-                            descHtml = `<div class="text-xs text-gray-500 mt-1.5 truncate">${this.escapeHtml(block.content.name)}</div>`; 
+                            descHtml = `<div class="text-sm text-gray-500 mt-2 truncate">${this.escapeHtml(block.content.name)}</div>`; 
                             break;
                         case 'document': 
                             icon='fa-file-pdf text-red-500'; 
                             title='文档附件'; 
-                            descHtml = `<div class="text-xs text-gray-500 mt-1.5 truncate">${this.escapeHtml(block.content.name)}</div>`; 
+                            descHtml = `<div class="text-sm text-gray-500 mt-2 truncate">${this.escapeHtml(block.content.name)}</div>`; 
                             break;
                         case 'form': 
                             icon='fa-list-check text-indigo-500'; 
                             title='数据表单'; 
-                            descHtml = `<div class="text-xs text-gray-500 mt-1.5 truncate">${this.escapeHtml(block.content.title)}</div>`; 
+                            descHtml = `<div class="text-sm text-gray-500 mt-2 truncate">${this.escapeHtml(block.content.title)}</div>`; 
                             break;
                         case 'combo': 
                             icon='fa-cubes text-primary'; 
                             title=block.content.title || '图文组合'; 
                             let itemsCount = block.content.items ? block.content.items.length : 0;
-                            let textPreview = block.content.text ? this.stripHtml(block.content.text).substring(0, 30) + '...' : '';
-                            descHtml = `<div class="text-xs text-gray-500 mt-1.5 line-clamp-2 leading-relaxed break-all">${textPreview}<br>包含 ${itemsCount} 个媒体附件</div>`; 
+                            let textPreview = block.content.text ? this.stripHtml(block.content.text).substring(0, 50) + '...' : '';
+                            descHtml = `<div class="text-sm text-gray-500 mt-2 line-clamp-3 leading-relaxed break-all">${textPreview}<br><span class="inline-block mt-1 font-medium text-primary bg-blue-50 px-2 py-0.5 rounded">包含 ${itemsCount} 个媒体附件</span></div>`; 
                             break;
                     }
 
                     blockEl.innerHTML = `
                         <div class="flex items-start gap-4 w-full overflow-hidden">
-                            <div class="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100 shadow-sm opacity-90">
-                                <i class="fas ${icon} text-xl"></i>
+                            <div class="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100 shadow-sm opacity-90 mt-1">
+                                <i class="fas ${icon} text-2xl"></i>
                             </div>
-                            <div class="flex flex-col flex-1 overflow-hidden mt-0.5">
-                                <span class="font-bold text-gray-800 text-sm truncate pr-2">${this.escapeHtml(title)}</span>
+                            <div class="flex flex-col flex-1 overflow-hidden">
+                                <!-- 【解除截断】移除 truncate，改用 break-words 使标题可以完整换行显示 -->
+                                <span class="font-bold text-gray-800 text-base break-words pr-6 leading-snug">${this.escapeHtml(title)}</span>
                                 ${descHtml}
                             </div>
                         </div>
-                        <div class="flex justify-end w-full mt-3 border-t border-gray-50 pt-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div class="flex justify-end w-full mt-3 border-t border-gray-50 pt-3 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onclick="app.removeBlock('${block.id}')" class="text-xs text-red-500 hover:text-red-600 flex items-center bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors font-medium">
-                                <i class="fas fa-trash-alt mr-1.5"></i>删除
+                                <i class="fas fa-trash-alt mr-1.5"></i>删除模块
                             </button>
                         </div>
                     `;
@@ -1427,7 +1427,7 @@
                 container.innerHTML = html;
             },
 
-            // ================= 核心渲染：二维码生成引擎 (完美1/5比例) =================
+            // ================= 核心渲染：二维码生成引擎 (完美1/5比例极简重构) =================
             renderQR() {
                 const qrContainer = document.getElementById('qrcode'); 
                 qrContainer.innerHTML = '';
@@ -1441,8 +1441,8 @@
                 // 强制将画布调小，彻底适配 1/5 比例
                 new QRCode(qrContainer, { 
                     text: targetUrl, 
-                    width: 128, 
-                    height: 128, 
+                    width: 120, 
+                    height: 120, 
                     colorDark : '#111827', 
                     colorLight : '#ffffff', 
                     correctLevel : QRCode.CorrectLevel.M 
