@@ -64,10 +64,10 @@
         .rich-text-content i { font-style: italic; }
         .rich-text-content u { text-decoration: underline; }
 
-        /* AI艺术码瀑布流卡片特效 */
-        .ai-template-card { transition: all 0.3s ease; }
-        .ai-template-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px -5px rgba(30,144,255,0.3); }
-        .ai-template-card.active { border: 3px solid #1E90FF; transform: scale(0.98); }
+        /* AI艺术码瀑布流卡片特效 - 设计师美化重构版 */
+        .ai-template-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .ai-template-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -8px rgba(0,0,0,0.15); }
+        .ai-template-card.active { border: 3px solid #1E90FF; transform: scale(0.96); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-8 px-4" id="drop-zone">
@@ -102,11 +102,11 @@
         <!-- 左侧编辑/任务区域占据 3/4 空间 -->
         <section class="lg:col-span-3 flex flex-col gap-6 relative">
             <div id="input-panel" class="bg-white rounded-2xl shadow-soft p-8 relative border-2 border-dashed border-transparent transition-all">
-                <div class="flex justify-between items-center mb-6">
+                <div class="flex justify-between items-center mb-6" id="panel-header">
                     <h2 id="panel-title" class="text-xl font-bold text-gray-800 tracking-wide">
                         <i class="fas fa-keyboard text-primary mr-2"></i>添加文本
                     </h2>
-                    <span class="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full font-medium">支持直接拖拽资源极速解析</span>
+                    <span id="panel-hint-pill" class="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full font-medium">支持直接拖拽资源极速解析</span>
                 </div>
                 
                 <div id="dynamic-input-area" class="w-full min-h-[140px]"></div>
@@ -128,14 +128,14 @@
             </div>
         </section>
 
-        <!-- 右侧二维码区域占据 1/4 空间，精致紧凑 -->
+        <!-- 右侧二维码区域占据 1/4 空间，体积缩小更加精致 -->
         <aside class="w-full flex flex-col gap-4 relative lg:col-span-1">
             <div class="bg-white rounded-2xl shadow-soft p-6 flex flex-col items-center sticky top-8 border border-gray-50">
                 
-                <!-- 带有 AI 背景层支持的精致二维码容器 -->
-                <div id="qrcode-wrapper" class="w-44 h-44 bg-white flex items-center justify-center rounded-xl mb-4 relative transition-all mt-2 p-2 shadow-sm border border-gray-100">
-                    <div id="qrcode" class="z-10 relative w-full h-full flex items-center justify-center"></div>
-                    <div id="ai-qr-bg" class="absolute inset-0 w-full h-full rounded-xl z-0 hidden bg-cover bg-center opacity-90"></div>
+                <!-- 极限缩小的二维码底座 -->
+                <div id="qrcode-wrapper" class="w-36 h-36 bg-white flex items-center justify-center rounded-2xl mb-5 relative transition-all mt-2 shadow-sm border border-gray-100 overflow-hidden">
+                    <div id="qrcode" class="z-10 relative flex items-center justify-center w-full h-full p-2"></div>
+                    <div id="ai-qr-bg" class="absolute inset-0 w-full h-full z-0 hidden bg-cover bg-center opacity-100"></div>
                 </div>
                 
                 <div id="qr-desc-text" class="text-center mb-6 w-full">
@@ -148,11 +148,11 @@
                         <i class="fas fa-share-nodes mr-2"></i> 复制专属链接
                     </button>
                     
-                    <div class="flex gap-3 w-full">
-                        <button onclick="app.downloadQR()" class="flex-1 bg-white border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 hover:text-primary transition-all text-sm font-semibold flex items-center justify-center shadow-sm">
+                    <div class="flex gap-2 w-full">
+                        <button onclick="app.downloadQR()" class="flex-1 bg-white border border-gray-200 text-gray-700 px-2 py-2 rounded-xl hover:bg-gray-50 hover:text-primary transition-all text-sm font-semibold flex items-center justify-center shadow-sm">
                             <i class="fas fa-download mr-1.5 text-gray-400"></i> 下载
                         </button>
-                        <button onclick="app.openBeautifyModal()" class="flex-1 bg-gradient-to-r from-fuchsia-500 to-pink-500 text-white py-2.5 rounded-xl hover:shadow-md transition-all text-sm font-semibold flex items-center justify-center">
+                        <button onclick="app.openBeautifyModal()" class="flex-1 bg-gradient-to-r from-fuchsia-500 to-pink-500 text-white px-2 py-2 rounded-xl hover:shadow-md hover:-translate-y-0.5 transition-all text-sm font-semibold flex items-center justify-center">
                             <i class="fas fa-magic mr-1.5"></i> 美化
                         </button>
                     </div>
@@ -164,7 +164,7 @@
     <!-- H5 游客实时预览容器 (扫码直接进入此界面) -->
     <div id="mobile-live-container" class="hidden w-full max-w-lg mx-auto bg-gray-50 min-h-screen pb-safe"></div>
 
-    <!-- 全屏图文组合编辑器 (已升级为富文本引擎) -->
+    <!-- 全屏图文组合编辑器 -->
     <div id="combo-editor-modal" class="fixed inset-0 bg-gray-100 z-[150] hidden flex-col">
         <div class="h-16 bg-white shadow-sm flex items-center justify-between px-6 border-b shrink-0">
             <h2 class="text-lg font-bold text-gray-800">
@@ -183,7 +183,6 @@
                     <input type="text" id="combo-title" placeholder="输入大标题 (选填)" class="w-full text-2xl font-bold border-none outline-none placeholder-gray-300 focus:ring-0 px-1">
                 </div>
                 
-                <!-- 全新富文本编辑器工具栏 (Toolbar) -->
                 <div class="flex flex-col">
                     <div class="flex flex-wrap gap-2 items-center bg-gray-50 p-2.5 rounded-t-lg border border-b-0 border-gray-200">
                         
@@ -196,7 +195,7 @@
                             <option value="FangSong">仿宋</option>
                         </select>
                         
-                        <!-- 字号选择 (原生 execCommand 使用 1-7 等级) -->
+                        <!-- 字号选择 -->
                         <select onchange="app.execCmd('fontSize', this.value)" class="bg-white border border-gray-300 rounded px-2 py-1 text-sm outline-none text-gray-700 cursor-pointer hover:border-primary">
                             <option value="">字号</option>
                             <option value="3">标准</option>
@@ -215,13 +214,12 @@
 
                         <div class="w-px h-5 bg-gray-300 mx-1"></div>
                         
-                        <!-- 基础样式 (加粗、倾斜、下划线) -->
+                        <!-- 基础样式 -->
                         <button onmousedown="event.preventDefault(); app.execCmd('bold')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200 text-gray-700 font-bold transition-all" title="加粗 (Ctrl+B)">B</button>
                         <button onmousedown="event.preventDefault(); app.execCmd('italic')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200 text-gray-700 italic font-serif transition-all" title="倾斜 (Ctrl+I)">I</button>
                         <button onmousedown="event.preventDefault(); app.execCmd('underline')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200 text-gray-700 underline transition-all" title="下划线 (Ctrl+U)">U</button>
                     </div>
                     
-                    <!-- 核心 DOM 编辑区 -->
                     <div id="combo-text" contenteditable="true" class="w-full h-40 p-4 border border-gray-200 rounded-b-lg outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary overflow-y-auto bg-white text-base text-gray-800 leading-relaxed rich-text-content" placeholder="在此输入文字，可选中文字进行局部样式修改..."></div>
                 </div>
                 
@@ -231,12 +229,12 @@
                         <span class="text-xs text-gray-400">支持拖拽排序，向下滚动查看</span>
                     </div>
                     
-                    <ul id="combo-items-list" class="flex flex-col gap-3 mb-4 min-h-[50px]"></ul>
+                    <ul id="combo-items-list" class="flex flex-col gap-3 mb-4 min-h-[5px]"></ul>
                     
                     <div id="combo-drop-zone" class="relative w-full h-24 bg-blue-50/50 rounded-xl border-2 border-dashed border-blue-200 flex flex-col items-center justify-center hover:bg-blue-50 transition-all group">
                         <input type="file" id="combo-file-input" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="app.handleComboFileSelect(event)">
                         <i class="fas fa-plus-circle text-2xl text-blue-300 group-hover:text-primary transition-colors mb-1"></i>
-                        <p class="text-sm text-gray-500">点击或将<span class="font-semibold text-primary"> 图片/音视频/PPT/文档 </span>拖拽至此极速上传到组合</p>
+                        <p class="text-sm text-gray-500">点击或将<span class="font-semibold text-primary"> 图片/音视频/PPT/文档 </span>拖拽至此添加到组合</p>
                     </div>
                 </div>
             </div>
@@ -256,12 +254,12 @@
         <i class="fas fa-sign-out-alt"></i>
     </button>
 
-    <!-- 管理员登录弹窗 -->
+    <!-- 管理员登录弹窗 (移除了多余文字) -->
     <div id="login-modal" class="fixed inset-0 bg-black/60 z-[200] hidden flex items-center justify-center backdrop-blur-sm">
         <div class="bg-white rounded-2xl p-8 w-80 shadow-2xl transform transition-all scale-100 relative">
             <h3 class="text-xl font-bold mb-6 text-center text-gray-800">系统鉴权</h3>
             <div class="mb-5">
-                <label class="block text-xs text-gray-500 mb-2">安全校验口令 (由 CF 环境变量设置)</label>
+                <label class="block text-xs text-gray-500 mb-2">安全校验口令</label>
                 <input type="password" id="admin-pwd" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="请输入密码">
             </div>
             <div class="flex gap-3">
@@ -319,13 +317,8 @@
                 draggedItemIndex: null,
                 isLiveMode: false,
                 
-                // 二维码全局配色状态
                 qrConfig: { dark: '#111827', light: '#ffffff' },
-                
-                // 网址双轨制状态
                 urlConfig: { mode: 'live', staticUrl: '' },
-                
-                // AI 艺术码状态
                 aiArtConfig: { active: false, bgUrl: '' }
             },
 
@@ -477,7 +470,7 @@
                 }
             },
             
-            // ================= 【极速切片与并发并发网络层引擎】 =================
+            // ================= 【极速切片与并发网络层引擎】 =================
             async uploadFilesConcurrent(files, progressCallback) {
                 if (!this.state.isAdmin) return [];
                 
@@ -801,7 +794,7 @@
                         }, 3000);
                     }
                 } catch (e) {
-                    alert('打包下载失败，网络中断或触发浏览器安全限制。');
+                    alert('打包下载失败，网络中断或触发浏览器跨域限制。');
                     if (btn) {
                         btn.innerHTML = '<i class="fas fa-cloud-download-alt mr-2"></i> 一键打包下载全部内容';
                     }
@@ -963,7 +956,7 @@
                 this.closeComboEditor();
             },
 
-            // ================= 基础UI与路由管理引擎 =================
+            // ================= 基础UI与路由管理引擎 (重构双轨网址与AI瀑布流) =================
             setMode(mode) { 
                 this.state.currentMode = mode; 
                 this.updateNavUI(); 
@@ -987,8 +980,8 @@
                 if (document.getElementById('panel-title')) {
                     document.getElementById('panel-title').innerHTML = `<i class="fas ${cfg.icon} text-primary mr-2"></i>${cfg.title}`;
                 }
-                if (document.getElementById('panel-hint')) {
-                    document.getElementById('panel-hint').innerText = cfg.hint;
+                if (document.getElementById('panel-hint-pill')) {
+                    document.getElementById('panel-hint-pill').innerText = cfg.hint;
                 }
                 
                 const addBtn = document.getElementById('btn-add-block');
@@ -1040,18 +1033,18 @@
                 }
                 else if (mode === 'ai_art') {
                     let templatesHtml = this.aiTemplates.map(t => `
-                        <div onclick="app.selectAiTemplate('${t.id}')" class="ai-template-card cursor-pointer rounded-xl overflow-hidden h-32 flex flex-col justify-end p-3 relative ${this.state.aiArtConfig.active === t.id ? 'active' : ''}" style="background: ${t.bg}">
-                            <div class="absolute inset-0 bg-black/10"></div>
-                            <span class="relative z-10 text-white font-bold text-sm tracking-wider drop-shadow-md">${t.name}</span>
+                        <div onclick="app.selectAiTemplate('${t.id}')" class="ai-template-card cursor-pointer rounded-2xl overflow-hidden h-36 flex flex-col justify-end p-4 relative ${this.state.aiArtConfig.active === t.id ? 'active' : ''}" style="background: ${t.bg};">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent"></div>
+                            <span class="relative z-10 text-white font-bold text-[15px] tracking-wider drop-shadow-md">${t.name}</span>
                         </div>
                     `).join('');
 
                     area.innerHTML = `
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-5 mb-8 mt-2">
                             ${templatesHtml}
                         </div>
-                        <div class="flex justify-center mt-6">
-                            <button onclick="app.generateAiArt()" class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-10 py-3 rounded-full hover:shadow-[0_4px_15px_0_rgba(217,70,239,0.4)] transition-all font-bold text-lg flex items-center">
+                        <div class="flex justify-start">
+                            <button onclick="app.generateAiArt()" class="w-full md:w-auto bg-gradient-to-r from-fuchsia-500 to-pink-500 text-white px-12 py-3.5 rounded-full hover:shadow-[0_6px_20px_rgba(217,70,239,0.4)] hover:-translate-y-0.5 transition-all font-bold text-[15px] flex items-center justify-center tracking-wide">
                                 <i class="fas fa-magic mr-2"></i>一键合成艺术融合码
                             </button>
                         </div>
@@ -1134,13 +1127,13 @@
                     this.renderQR();
                     
                     btn.innerHTML = '<i class="fas fa-check-circle mr-2"></i>生成完毕，请在右侧查收';
-                    btn.classList.replace('from-purple-500', 'from-green-500');
-                    btn.classList.replace('to-pink-500', 'to-emerald-500');
+                    btn.classList.replace('from-fuchsia-500', 'from-emerald-500');
+                    btn.classList.replace('to-pink-500', 'to-teal-500');
                     
                     setTimeout(() => {
                         btn.innerHTML = originHtml;
-                        btn.classList.replace('from-green-500', 'from-purple-500');
-                        btn.classList.replace('to-emerald-500', 'to-pink-500');
+                        btn.classList.replace('from-emerald-500', 'from-fuchsia-500');
+                        btn.classList.replace('to-teal-500', 'to-pink-500');
                     }, 2000);
                 }, 1500);
             },
@@ -1155,7 +1148,7 @@
                 
                 const results = await this.uploadFilesConcurrent(files, (percent) => {
                     const statusText = document.getElementById('upload-status-text');
-                    if (statusText) statusText.innerText = `极速网络上传中: ${percent}%`;
+                    if (statusText) statusText.innerText = `极速上传中: ${percent}%`;
                 });
                 
                 results.forEach(res => {
@@ -1443,7 +1436,6 @@
                     </div>
                     <p class="text-center text-xs text-gray-300 mt-8 mb-6 tracking-widest uppercase">THE END</p>
                     
-                    <!-- 一键批量下载功能挂载区 -->
                     <div class="fixed bottom-0 left-0 w-full p-4 pb-8 bg-white/85 backdrop-blur-xl border-t border-gray-100 z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.06)]">
                         <button id="btn-batch-download" onclick="app.downloadAllFiles()" class="w-full max-w-lg mx-auto bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3.5 rounded-xl shadow-[0_4px_15px_rgba(30,144,255,0.3)] hover:shadow-[0_6px_25px_rgba(30,144,255,0.4)] hover:-translate-y-0.5 transition-all font-semibold flex items-center justify-center text-[15px] tracking-wide active:scale-95">
                             <i class="fas fa-cloud-download-alt mr-2 text-lg"></i> 一键打包下载全部内容
@@ -1453,7 +1445,7 @@
                 container.innerHTML = html;
             },
 
-            // ================= 核心重绘与混合：二维码渲染引擎 =================
+            // ================= 二维码美化引擎与核心渲染 =================
             renderQR() {
                 const qrContainer = document.getElementById('qrcode'); 
                 const bgLayer = document.getElementById('ai-qr-bg');
@@ -1469,10 +1461,11 @@
                     bgLayer.style.background = this.state.aiArtConfig.bgUrl;
                     bgLayer.classList.remove('hidden');
                     
+                    // 为了融合底图稍微缩小一点让边界清晰
                     new QRCode(qrContainer, { 
                         text: targetUrl, 
-                        width: 140, 
-                        height: 140, 
+                        width: 128, 
+                        height: 128, 
                         colorDark : this.state.qrConfig.dark, 
                         colorLight : 'transparent', // 透明以便透出底层艺术墙
                         correctLevel : QRCode.CorrectLevel.H 
@@ -1482,21 +1475,13 @@
                     
                     new QRCode(qrContainer, { 
                         text: targetUrl, 
-                        width: 160, 
-                        height: 160, 
+                        width: 128, // 匹配 144px 外框
+                        height: 128, 
                         colorDark : this.state.qrConfig.dark, 
                         colorLight : this.state.qrConfig.light === 'transparent' ? '#ffffff' : this.state.qrConfig.light, 
                         correctLevel : QRCode.CorrectLevel.M 
                     });
                 }
-                
-                setTimeout(() => { 
-                    const canvas = qrContainer.querySelector('canvas'); 
-                    if(canvas) { 
-                        canvas.style.borderRadius = '0.5rem'; 
-                        canvas.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)'; 
-                    } 
-                }, 50);
             },
             
             downloadQR() {
