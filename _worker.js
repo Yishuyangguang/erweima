@@ -19,6 +19,53 @@ export default {
       return auth === `Bearer ${validPwd}`;
     };
 
+    // ================= [新增核心]: 活码探针与区域收集 API =================
+    if (path === '/api/track' && method === 'POST') {
+      try {
+        const id = url.searchParams.get('id');
+        if (!id) return new Response('Bad Request', { status: 400, headers: corsHeaders });
+        
+        // 利用 Cloudflare 边缘计算原生特性，零延迟读取国家与城市信息
+        const country = request.cf?.country || '未知国家';
+        const city = request.cf?.city || '未知区域';
+        const regionStr = `${country}-${city}`;
+        const dateStr = new Date().toISOString().split('T')[0];
+
+        if (env.BUCKET) {
+            let stats = {};
+            const existing = await env.BUCKET.get('site_stats.json');
+            if (existing) {
+                try { stats = await existing.json(); } catch(e) {}
+            }
+            
+            // 初始化数据结构
+            if (!stats[id]) stats[id] = { total: 0, regions: {}, dates: {} };
+            
+            stats[id].total += 1;
+            stats[id].regions[regionStr] = (stats[id].regions[regionStr] || 0) + 1;
+            stats[id].dates[dateStr] = (stats[id].dates[dateStr] || 0) + 1;
+            
+            await env.BUCKET.put('site_stats.json', JSON.stringify(stats));
+        }
+        return new Response('OK', { status: 200, headers: corsHeaders });
+      } catch (e) {
+        return new Response('Error', { status: 500, headers: corsHeaders });
+      }
+    }
+
+    // ================= [新增核心]: 统计数据提取 API =================
+    if (path === '/api/stats' && method === 'GET') {
+      if (!checkAuth(request)) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
+      try {
+        if (!env.BUCKET) throw new Error("R2 Not Bound");
+        const existing = await env.BUCKET.get('site_stats.json');
+        const data = existing ? await existing.json() : {};
+        return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      } catch (err) {
+        return new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      }
+    }
+
     // 1. 管理员登录验证
     if (path === '/api/auth' && method === 'POST') {
       try {
