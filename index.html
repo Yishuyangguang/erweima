@@ -56,7 +56,7 @@
             border: 1px dashed #1E90FF; 
         }
         
-        /* 移动端 H5 底部安全区 */
+        /* 移动端 H5 底部安全区，防止被悬浮按钮遮挡 */
         .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom) + 100px); }
 
         /* 富文本编辑器内部基础排版适配 */
@@ -67,7 +67,7 @@
 </head>
 <body class="min-h-screen flex flex-col items-center py-8 px-4" id="drop-zone">
 
-    <!-- 顶部导航栏 -->
+    <!-- 顶部导航栏 (已剔除AI艺术码) -->
     <header class="w-full max-w-[1400px] flex justify-center gap-3 mb-8 flex-wrap admin-only px-4">
         <button onclick="app.setMode('text')" class="nav-btn bg-white px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-gray-600 active-nav">文本</button>
         <button onclick="app.setMode('url')" class="nav-btn bg-white px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-gray-600">网址</button>
@@ -86,7 +86,7 @@
         </button>
     </header>
 
-    <!-- PC端管理工作区 (升级为5列网格，极致压榨空间：左4右1) -->
+    <!-- PC端管理工作区 (5列网格，极致压榨空间：左4右1) -->
     <main class="w-full max-w-[1400px] grid grid-cols-1 lg:grid-cols-5 gap-8 admin-only px-4">
         
         <!-- 左侧编辑/任务区域占据 4/5 (80%) 空间 -->
@@ -114,24 +114,26 @@
                         <i class="fas fa-rotate mr-1.5"></i> 发布至前端
                     </button>
                 </div>
-                <div id="blocks-container" class="flex flex-col gap-4 w-full"></div>
+                <!-- 核心：发布流卡片化 (小卡片对称网格排列) -->
+                <div id="blocks-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 w-full"></div>
             </div>
         </section>
 
-        <!-- 右侧二维码区域占据 1/5 (20%) 空间，极限压缩位置 -->
+        <!-- 右侧二维码区域占据 1/5 (20%) 空间，极致收缩比例 -->
         <aside class="w-full flex flex-col gap-4 relative lg:col-span-1">
             <div class="bg-white rounded-2xl shadow-sm p-6 flex flex-col items-center sticky top-8 border border-gray-50">
                 
-                <div id="qrcode-wrapper" class="w-36 h-36 bg-white flex items-center justify-center rounded-xl mb-4 relative transition-all mt-2 border border-gray-100 p-1.5">
+                <!-- 精巧尺寸二维码容器 -->
+                <div id="qrcode-wrapper" class="w-32 h-32 bg-white flex items-center justify-center rounded-xl mb-4 relative transition-all mt-2 border border-gray-100 p-1.5">
                     <div id="qrcode" class="z-10 relative flex items-center justify-center w-full h-full"></div>
                 </div>
                 
                 <div id="qr-desc-text" class="text-center mb-6 w-full">
                     <p class="text-sm text-gray-600 font-medium mb-1">此处扫描活码进入 H5 页面</p>
-                    <p class="text-[11px] text-gray-400 leading-tight tracking-wide">(内容修改自动同步，图案永久不变)</p>
+                    <p class="text-[11px] text-gray-400 leading-tight tracking-wide">(内容修改自动同步，图案不变)</p>
                 </div>
                 
-                <!-- 功能按钮合并为一行 -->
+                <!-- 功能按钮剔除美化，合并为同行双拼 -->
                 <div class="flex gap-2 w-full">
                     <button onclick="app.generateShareLink()" class="flex-1 bg-primary text-white py-2.5 rounded-lg hover:bg-blue-600 shadow-sm transition-all text-[13px] font-semibold flex items-center justify-center">
                         <i class="fas fa-link mr-1.5"></i> 复制链接
@@ -147,7 +149,7 @@
     <!-- H5 游客实时预览容器 (扫码直接进入此界面) -->
     <div id="mobile-live-container" class="hidden w-full max-w-lg mx-auto bg-gray-50 min-h-screen pb-safe"></div>
 
-    <!-- 全屏图文组合编辑器 (已升级为富文本引擎) -->
+    <!-- 全屏图文组合编辑器 (富文本引擎) -->
     <div id="combo-editor-modal" class="fixed inset-0 bg-gray-100 z-[150] hidden flex-col">
         <div class="h-16 bg-white shadow-sm flex items-center justify-between px-6 border-b shrink-0">
             <h2 class="text-lg font-bold text-gray-800">
@@ -166,7 +168,7 @@
                     <input type="text" id="combo-title" placeholder="输入大标题 (选填)" class="w-full text-2xl font-bold border-none outline-none placeholder-gray-300 focus:ring-0 px-1">
                 </div>
                 
-                <!-- 全新富文本编辑器工具栏 (Toolbar) -->
+                <!-- 富文本编辑器工具栏 (Toolbar) -->
                 <div class="flex flex-col">
                     <div class="flex flex-wrap gap-2 items-center bg-gray-50 p-2.5 rounded-t-lg border border-b-0 border-gray-200">
                         
@@ -234,7 +236,7 @@
         <i class="fas fa-sign-out-alt"></i>
     </button>
 
-    <!-- 管理员登录弹窗 (纯净精简版) -->
+    <!-- 管理员登录弹窗 (纯净版，剔除多余文字) -->
     <div id="login-modal" class="fixed inset-0 bg-black/60 z-[200] hidden flex items-center justify-center backdrop-blur-sm">
         <div class="bg-white rounded-2xl p-8 w-80 shadow-2xl transform transition-all scale-100 relative">
             <h3 class="text-xl font-bold mb-6 text-center text-gray-800">系统鉴权</h3>
@@ -269,9 +271,12 @@
                 token: sessionStorage.getItem('adminToken') || '',
                 liveUrl: window.location.origin + window.location.pathname + '?view=live',
                 comboDraft: { title: '', text: '', items: [] },
-                draggedItemIndex: null,
-                isLiveMode: false,
                 
+                // 拖拽相关状态记录
+                draggedItemIndex: null,
+                draggedMainIndex: null,
+                
+                isLiveMode: false,
                 // 网址双轨制状态
                 urlConfig: { mode: 'live', staticUrl: '' }
             },
@@ -330,7 +335,7 @@
                         document.getElementById('login-modal').classList.add('hidden');
                         this.enableAdminMode();
                     } else {
-                        alert('⚠️ 鉴权失败：密码错误，请检查您的设置。');
+                        alert('⚠️ 鉴权失败：密码错误，请检查您的 CF 环境变量。');
                     }
                 } catch (e) { 
                     alert('后端连接异常，请确认 CF Pages 部署状态'); 
@@ -568,7 +573,7 @@
                 return tmp.textContent || tmp.innerText || "";
             },
 
-            // ================= 全局防御性文件拖拽解析 (修复报错的核心点) =================
+            // ================= 全局防御性文件拖拽解析 =================
             bindGlobalDragAndDrop() {
                 const dropZone = document.body; 
                 
@@ -735,7 +740,7 @@
                         }, 3000);
                     }
                 } catch (e) {
-                    alert('打包下载失败，网络中断或触发浏览器跨域限制。');
+                    alert('打包下载失败，网络中断或触发浏览器安全限制。');
                     if (btn) {
                         btn.innerHTML = '<i class="fas fa-cloud-download-alt mr-2"></i> 一键打包下载全部内容';
                     }
@@ -897,18 +902,17 @@
                 this.closeComboEditor();
             },
 
-            // ================= 基础UI与路由管理引擎 (重构双轨网址，彻底清除AI) =================
+            // ================= 基础UI与路由管理引擎 (含排版更新修复) =================
             setMode(mode) { 
                 this.state.currentMode = mode; 
                 this.updateNavUI(); 
                 this.renderInputArea(); 
                 
-                // 每次切换时，重置非通用状态
                 if (mode !== 'url') {
                     this.state.urlConfig.staticUrl = '';
                 }
                 
-                this.renderQR(); // 刷新二维码以消除残留状态
+                this.renderQR(); 
             },
             
             updateNavUI() {
@@ -920,11 +924,12 @@
                 });
                 
                 const cfg = this.configs[this.state.currentMode];
-                const titleEl = document.getElementById('panel-title');
-                const hintEl = document.getElementById('panel-hint-pill');
                 
+                const titleEl = document.getElementById('panel-title');
                 if (titleEl) titleEl.innerHTML = `<i class="fas ${cfg.icon} text-primary mr-2"></i>${cfg.title}`;
-                if (hintEl) hintEl.innerText = cfg.hint;
+                
+                const hintPillEl = document.getElementById('panel-hint-pill');
+                if (hintPillEl) hintPillEl.innerText = cfg.hint;
                 
                 const footerAction = document.getElementById('panel-footer-action');
                 if (footerAction) {
@@ -1010,10 +1015,8 @@
             switchUrlMode(mode) {
                 this.state.urlConfig.mode = mode;
                 if (mode === 'static') {
-                    // 切换到静态码时，将二维码立刻指向输入框内容
                     this.state.urlConfig.staticUrl = document.getElementById('input-data')?.value || '';
                 } else {
-                    // 切换回活码时，重置
                     this.state.urlConfig.staticUrl = '';
                 }
                 this.updateNavUI();
@@ -1022,13 +1025,12 @@
             },
             
             handleStaticUrlInput(val) {
-                // 实时捕捉输入并自动修正协议头
                 let fullUrl = val.trim();
                 if (fullUrl && !/^https?:\/\//i.test(fullUrl)) {
                     fullUrl = 'https://' + fullUrl;
                 }
                 this.state.urlConfig.staticUrl = fullUrl;
-                this.renderQR(); // 触发实时重绘
+                this.renderQR(); 
             },
 
             async handleMainFileSelect(event) {
@@ -1147,7 +1149,7 @@
 
             generateBlockHtml(block, isLive = false) {
                 let html = '';
-                const baseClass = isLive ? 'w-full mb-5 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden' : 'flex-1';
+                const baseClass = isLive ? 'w-full mb-5 bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/50 overflow-hidden' : 'flex-1';
                 
                 if (block.type === 'combo') {
                     const c = block.content; 
@@ -1262,6 +1264,7 @@
                 return html;
             },
 
+            // ================= 核心渲染：发布区降维横排卡片显示 =================
             renderBlocks() {
                 const container = document.getElementById('blocks-container');
                 if (!container) return;
@@ -1278,24 +1281,71 @@
                 
                 container.innerHTML = '';
                 
-                this.state.blocks.forEach((block) => {
+                this.state.blocks.forEach((block, index) => {
                     const blockEl = document.createElement('div');
-                    blockEl.className = 'block-animate bg-white border border-gray-100 rounded-xl p-3 flex items-center justify-between group relative shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] transition-all';
+                    blockEl.draggable = true;
+                    blockEl.className = 'block-animate bg-white border border-gray-100 rounded-xl p-4 flex flex-col justify-between group relative shadow-sm hover:shadow-md transition-all h-28 border-l-4 border-l-primary cursor-move';
                     
+                    // 绑定原主网格的防乱序拖拽事件
+                    blockEl.ondragstart = (e) => this.handleMainDragStart(e, index); 
+                    blockEl.ondragover = (e) => this.handleMainDragOver(e); 
+                    blockEl.ondrop = (e) => this.handleMainDrop(e, index); 
+                    blockEl.ondragend = (e) => this.handleMainDragEnd(e);
+
+                    let icon = 'fa-file'; 
+                    let title = ''; 
+                    let desc = '';
+                    
+                    switch(block.type) {
+                        case 'text': icon='fa-font text-gray-500'; title='文本段落'; desc=block.content.substring(0,15)+'...'; break;
+                        case 'url': icon='fa-link text-blue-500'; title='网址链接'; desc=block.content; break;
+                        case 'image': icon='fa-image text-green-500'; title='图片资源'; desc=block.content.name; break;
+                        case 'audio': icon='fa-music text-yellow-500'; title='音频文件'; desc=block.content.name; break;
+                        case 'video': icon='fa-video text-purple-500'; title='视频文件'; desc=block.content.name; break;
+                        case 'document': icon='fa-file-pdf text-red-500'; title='文档附件'; desc=block.content.name; break;
+                        case 'form': icon='fa-list-check text-indigo-500'; title='数据表单'; desc=block.content.title; break;
+                        case 'combo': 
+                            icon='fa-cubes text-primary'; 
+                            title=block.content.title || '图文组合'; 
+                            let itemsCount = block.content.items ? block.content.items.length : 0;
+                            desc=`包含 ${itemsCount} 个媒体附件`; 
+                            break;
+                    }
+
                     blockEl.innerHTML = `
-                        <div class="flex items-center w-full overflow-hidden">
-                            <div class="mr-3 text-gray-300 shrink-0 cursor-move opacity-50 hover:opacity-100">
-                                <i class="fas fa-ellipsis-v"></i><i class="fas fa-ellipsis-v -ml-1"></i>
+                        <div class="flex items-start gap-3 w-full overflow-hidden">
+                            <div class="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100">
+                                <i class="fas ${icon} text-lg"></i>
                             </div>
-                            ${this.generateBlockHtml(block, false)}
+                            <div class="flex flex-col flex-1 overflow-hidden mt-0.5">
+                                <span class="font-bold text-gray-800 text-sm truncate">${this.escapeHtml(title)}</span>
+                                <span class="text-xs text-gray-400 mt-1 truncate">${this.escapeHtml(desc)}</span>
+                            </div>
                         </div>
-                        <button onclick="app.removeBlock('${block.id}')" class="w-9 h-9 rounded-full bg-red-50 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white absolute right-4 shadow-md shrink-0">
-                            <i class="fas fa-trash-alt text-sm"></i>
-                        </button>
+                        <div class="flex justify-end w-full mt-2 border-t border-gray-50 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="app.removeBlock('${block.id}')" class="text-xs text-red-500 hover:text-red-600 flex items-center bg-red-50 hover:bg-red-100 px-2 py-1 rounded transition-colors">
+                                <i class="fas fa-trash-alt mr-1"></i>删除
+                            </button>
+                        </div>
                     `;
                     container.appendChild(blockEl);
                 });
             },
+
+            // 主界面发布流的拖拽排序逻辑
+            handleMainDragStart(e, index) { this.state.draggedMainIndex = index; e.dataTransfer.effectAllowed = "move"; e.target.classList.add('sortable-ghost'); },
+            handleMainDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; },
+            handleMainDrop(e, targetIndex) {
+                e.preventDefault(); 
+                const sourceIndex = this.state.draggedMainIndex;
+                if (sourceIndex !== null && sourceIndex !== targetIndex) {
+                    const blocks = this.state.blocks; 
+                    const [removed] = blocks.splice(sourceIndex, 1); 
+                    blocks.splice(targetIndex, 0, removed); 
+                    this.renderBlocks();
+                }
+            },
+            handleMainDragEnd(e) { e.target.classList.remove('sortable-ghost'); this.state.draggedMainIndex = null; },
 
             renderLiveH5() {
                 document.title = "在线查阅系统";
@@ -1338,19 +1388,18 @@
                 container.innerHTML = html;
             },
 
-            // ================= 核心渲染：二维码生成引擎 =================
+            // ================= 核心渲染：二维码引擎 =================
             renderQR() {
                 const qrContainer = document.getElementById('qrcode'); 
                 qrContainer.innerHTML = '';
                 
                 let targetUrl = this.state.liveUrl;
                 
-                // 如果是独立网址模式中的静态码，则直接使用当前输入框内的物理链接
                 if (this.state.currentMode === 'url' && this.state.urlConfig.mode === 'static') {
                     targetUrl = this.state.urlConfig.staticUrl || 'https://';
                 }
 
-                // 为了完美适配 1/5 比例布局中的小型二维码框，将核心渲染下调为 128px
+                // 强制将画布调小，彻底适配 1/5 比例
                 new QRCode(qrContainer, { 
                     text: targetUrl, 
                     width: 128, 
@@ -1374,7 +1423,7 @@
                 
                 const url = canvas.toDataURL("image/png");
                 const a = document.createElement('a');
-                a.download = `专属二维码_${new Date().getTime()}.png`;
+                a.download = `专属活码_${new Date().getTime()}.png`;
                 a.href = url;
                 a.click();
             },
@@ -1397,7 +1446,7 @@
                         btn.classList.replace('bg-green-500', 'bg-primary'); 
                     }, 2000);
                 }).catch(() => { 
-                    alert('复制失败，请手动复制链接'); 
+                    alert('复制失败，请手动复制下方链接: \n\n' + this.state.liveUrl); 
                 });
             }
         };
