@@ -67,7 +67,7 @@
 </head>
 <body class="min-h-screen flex flex-col items-center py-8 px-4" id="drop-zone">
 
-    <!-- 顶部导航栏 (已剔除AI艺术码) -->
+    <!-- 顶部导航栏 -->
     <header class="w-full max-w-[1400px] flex justify-center gap-3 mb-8 flex-wrap admin-only px-4">
         <button onclick="app.setMode('text')" class="nav-btn bg-white px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-gray-600 active-nav">文本</button>
         <button onclick="app.setMode('url')" class="nav-btn bg-white px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-gray-600">网址</button>
@@ -86,7 +86,7 @@
         </button>
     </header>
 
-    <!-- PC端管理工作区 (5列网格，极致压榨空间：左4右1) -->
+    <!-- PC端管理工作区 (升级为5列网格，极致扩容：左4右1) -->
     <main class="w-full max-w-[1400px] grid grid-cols-1 lg:grid-cols-5 gap-8 admin-only px-4">
         
         <!-- 左侧编辑/任务区域占据 4/5 (80%) 空间 -->
@@ -107,6 +107,7 @@
                 </div>
             </div>
 
+            <!-- 当前在线流 (卡片化网格排版) -->
             <div class="bg-white rounded-2xl shadow-sm p-8 min-h-[350px]">
                 <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
                     <h3 class="text-lg font-bold text-gray-800">当前在线流 (扫码可见)</h3>
@@ -114,32 +115,33 @@
                         <i class="fas fa-rotate mr-1.5"></i> 发布至前端
                     </button>
                 </div>
-                <!-- 核心：发布流卡片化 (小卡片对称网格排列) -->
-                <div id="blocks-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 w-full"></div>
+                <!-- 改用 grid 并且两列排列，形成对称卡片 -->
+                <div id="blocks-container" class="grid grid-cols-1 xl:grid-cols-2 gap-5 w-full"></div>
             </div>
         </section>
 
-        <!-- 右侧二维码区域占据 1/5 (20%) 空间，极致收缩比例 -->
+        <!-- 右侧二维码区域占据 1/5 (20%) 空间，极限压缩位置与元素 -->
         <aside class="w-full flex flex-col gap-4 relative lg:col-span-1">
-            <div class="bg-white rounded-2xl shadow-sm p-6 flex flex-col items-center sticky top-8 border border-gray-50">
+            <!-- 压缩 p-6 到 p-5，去除冗余边距 -->
+            <div class="bg-white rounded-2xl shadow-sm p-5 flex flex-col items-center sticky top-8 border border-gray-50">
                 
-                <!-- 精巧尺寸二维码容器 -->
-                <div id="qrcode-wrapper" class="w-32 h-32 bg-white flex items-center justify-center rounded-xl mb-4 relative transition-all mt-2 border border-gray-100 p-1.5">
+                <!-- 极限收缩二维码边框 -->
+                <div id="qrcode-wrapper" class="w-32 h-32 bg-white flex items-center justify-center rounded-xl mb-3 relative transition-all mt-1 border border-gray-100 p-1.5">
                     <div id="qrcode" class="z-10 relative flex items-center justify-center w-full h-full"></div>
                 </div>
                 
-                <div id="qr-desc-text" class="text-center mb-6 w-full">
-                    <p class="text-sm text-gray-600 font-medium mb-1">此处扫描活码进入 H5 页面</p>
+                <div id="qr-desc-text" class="text-center mb-5 w-full">
+                    <p class="text-[13px] text-gray-700 font-bold mb-1">此处扫描活码进入 H5 页面</p>
                     <p class="text-[11px] text-gray-400 leading-tight tracking-wide">(内容修改自动同步，图案不变)</p>
                 </div>
                 
-                <!-- 功能按钮剔除美化，合并为同行双拼 -->
+                <!-- 极简双按钮，挤压在一行 -->
                 <div class="flex gap-2 w-full">
-                    <button onclick="app.generateShareLink()" class="flex-1 bg-primary text-white py-2.5 rounded-lg hover:bg-blue-600 shadow-sm transition-all text-[13px] font-semibold flex items-center justify-center">
-                        <i class="fas fa-link mr-1.5"></i> 复制链接
+                    <button onclick="app.generateShareLink()" class="flex-1 bg-primary text-white py-2 rounded-lg hover:bg-blue-600 shadow-sm transition-all text-[12px] font-semibold flex items-center justify-center">
+                        <i class="fas fa-link mr-1"></i> 复制链接
                     </button>
-                    <button onclick="app.downloadQR()" class="flex-1 bg-white border border-gray-200 text-gray-700 py-2.5 rounded-lg hover:bg-gray-50 hover:text-primary transition-all text-[13px] font-semibold flex items-center justify-center shadow-sm">
-                        <i class="fas fa-download mr-1.5"></i> 下载
+                    <button onclick="app.downloadQR()" class="flex-1 bg-white border border-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-50 hover:text-primary transition-all text-[12px] font-semibold flex items-center justify-center shadow-sm">
+                        <i class="fas fa-download mr-1"></i> 下载
                     </button>
                 </div>
             </div>
@@ -149,7 +151,7 @@
     <!-- H5 游客实时预览容器 (扫码直接进入此界面) -->
     <div id="mobile-live-container" class="hidden w-full max-w-lg mx-auto bg-gray-50 min-h-screen pb-safe"></div>
 
-    <!-- 全屏图文组合编辑器 (富文本引擎) -->
+    <!-- 全屏图文组合编辑器 (已升级为富文本引擎) -->
     <div id="combo-editor-modal" class="fixed inset-0 bg-gray-100 z-[150] hidden flex-col">
         <div class="h-16 bg-white shadow-sm flex items-center justify-between px-6 border-b shrink-0">
             <h2 class="text-lg font-bold text-gray-800">
@@ -236,7 +238,7 @@
         <i class="fas fa-sign-out-alt"></i>
     </button>
 
-    <!-- 管理员登录弹窗 (纯净版，剔除多余文字) -->
+    <!-- 管理员登录弹窗 (完美净化版) -->
     <div id="login-modal" class="fixed inset-0 bg-black/60 z-[200] hidden flex items-center justify-center backdrop-blur-sm">
         <div class="bg-white rounded-2xl p-8 w-80 shadow-2xl transform transition-all scale-100 relative">
             <h3 class="text-xl font-bold mb-6 text-center text-gray-800">系统鉴权</h3>
@@ -272,11 +274,10 @@
                 liveUrl: window.location.origin + window.location.pathname + '?view=live',
                 comboDraft: { title: '', text: '', items: [] },
                 
-                // 拖拽相关状态记录
                 draggedItemIndex: null,
-                draggedMainIndex: null,
-                
+                draggedMainIndex: null, // 为发布流新增独立的拖拽指针
                 isLiveMode: false,
+                
                 // 网址双轨制状态
                 urlConfig: { mode: 'live', staticUrl: '' }
             },
@@ -740,7 +741,7 @@
                         }, 3000);
                     }
                 } catch (e) {
-                    alert('打包下载失败，网络中断或触发浏览器安全限制。');
+                    alert('打包下载失败，网络中断或触发浏览器跨域限制。');
                     if (btn) {
                         btn.innerHTML = '<i class="fas fa-cloud-download-alt mr-2"></i> 一键打包下载全部内容';
                     }
@@ -902,7 +903,7 @@
                 this.closeComboEditor();
             },
 
-            // ================= 基础UI与路由管理引擎 (含排版更新修复) =================
+            // ================= 基础UI与路由管理引擎 =================
             setMode(mode) { 
                 this.state.currentMode = mode; 
                 this.updateNavUI(); 
@@ -933,7 +934,6 @@
                 
                 const footerAction = document.getElementById('panel-footer-action');
                 if (footerAction) {
-                    // 如果在已上传列表，或者处于静态网址模式，则不显示“加入流水线”按钮
                     if (this.state.currentMode === 'uploaded' || (this.state.currentMode === 'url' && this.state.urlConfig.mode === 'static')) {
                         footerAction.style.display = 'none';
                     } else {
@@ -1149,7 +1149,7 @@
 
             generateBlockHtml(block, isLive = false) {
                 let html = '';
-                const baseClass = isLive ? 'w-full mb-5 bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/50 overflow-hidden' : 'flex-1';
+                const baseClass = isLive ? 'w-full mb-5 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden' : 'flex-1';
                 
                 if (block.type === 'combo') {
                     const c = block.content; 
@@ -1264,14 +1264,14 @@
                 return html;
             },
 
-            // ================= 核心渲染：发布区降维横排卡片显示 =================
+            // ================= 核心渲染：发布流降维卡片展示 (完美适配图1) =================
             renderBlocks() {
                 const container = document.getElementById('blocks-container');
                 if (!container) return;
                 
                 if (this.state.blocks.length === 0) {
                     container.innerHTML = `
-                        <div class="flex flex-col items-center justify-center h-48 text-gray-400">
+                        <div class="flex flex-col items-center justify-center h-48 text-gray-400 w-full col-span-full">
                             <i class="fas fa-layer-group text-5xl mb-4 opacity-40"></i>
                             <p class="text-sm font-medium">内容流水线为空，请在上方添加模块</p>
                         </div>
@@ -1284,9 +1284,9 @@
                 this.state.blocks.forEach((block, index) => {
                     const blockEl = document.createElement('div');
                     blockEl.draggable = true;
-                    blockEl.className = 'block-animate bg-white border border-gray-100 rounded-xl p-4 flex flex-col justify-between group relative shadow-sm hover:shadow-md transition-all h-28 border-l-4 border-l-primary cursor-move';
+                    // 彻底解除高度锁死，改用自适应内容，配合左右对称网格
+                    blockEl.className = 'block-animate bg-white border border-gray-100 rounded-2xl p-4 flex flex-col justify-between group relative shadow-sm hover:shadow-md transition-all min-h-[100px] h-auto border-l-4 border-l-primary cursor-move';
                     
-                    // 绑定原主网格的防乱序拖拽事件
                     blockEl.ondragstart = (e) => this.handleMainDragStart(e, index); 
                     blockEl.ondragover = (e) => this.handleMainDragOver(e); 
                     blockEl.ondrop = (e) => this.handleMainDrop(e, index); 
@@ -1294,37 +1294,66 @@
 
                     let icon = 'fa-file'; 
                     let title = ''; 
-                    let desc = '';
+                    let descHtml = '';
                     
                     switch(block.type) {
-                        case 'text': icon='fa-font text-gray-500'; title='文本段落'; desc=block.content.substring(0,15)+'...'; break;
-                        case 'url': icon='fa-link text-blue-500'; title='网址链接'; desc=block.content; break;
-                        case 'image': icon='fa-image text-green-500'; title='图片资源'; desc=block.content.name; break;
-                        case 'audio': icon='fa-music text-yellow-500'; title='音频文件'; desc=block.content.name; break;
-                        case 'video': icon='fa-video text-purple-500'; title='视频文件'; desc=block.content.name; break;
-                        case 'document': icon='fa-file-pdf text-red-500'; title='文档附件'; desc=block.content.name; break;
-                        case 'form': icon='fa-list-check text-indigo-500'; title='数据表单'; desc=block.content.title; break;
+                        case 'text': 
+                            icon='fa-font text-blue-500'; 
+                            title='文本段落'; 
+                            descHtml = `<div class="text-xs text-gray-500 mt-1.5 line-clamp-2 leading-relaxed break-all">${this.escapeHtml(block.content)}</div>`; 
+                            break;
+                        case 'url': 
+                            icon='fa-link text-blue-500'; 
+                            title='网址链接'; 
+                            descHtml = `<div class="text-xs text-blue-400 mt-1.5 truncate">${this.escapeHtml(block.content)}</div>`; 
+                            break;
+                        case 'image': 
+                            icon='fa-image text-green-500'; 
+                            title='图片资源'; 
+                            descHtml = `<div class="text-xs text-gray-500 mt-1.5 truncate">${this.escapeHtml(block.content.name)}</div>`; 
+                            break;
+                        case 'audio': 
+                            icon='fa-music text-yellow-500'; 
+                            title='音频文件'; 
+                            descHtml = `<div class="text-xs text-gray-500 mt-1.5 truncate">${this.escapeHtml(block.content.name)}</div>`; 
+                            break;
+                        case 'video': 
+                            icon='fa-video text-purple-500'; 
+                            title='视频文件'; 
+                            descHtml = `<div class="text-xs text-gray-500 mt-1.5 truncate">${this.escapeHtml(block.content.name)}</div>`; 
+                            break;
+                        case 'document': 
+                            icon='fa-file-pdf text-red-500'; 
+                            title='文档附件'; 
+                            descHtml = `<div class="text-xs text-gray-500 mt-1.5 truncate">${this.escapeHtml(block.content.name)}</div>`; 
+                            break;
+                        case 'form': 
+                            icon='fa-list-check text-indigo-500'; 
+                            title='数据表单'; 
+                            descHtml = `<div class="text-xs text-gray-500 mt-1.5 truncate">${this.escapeHtml(block.content.title)}</div>`; 
+                            break;
                         case 'combo': 
                             icon='fa-cubes text-primary'; 
                             title=block.content.title || '图文组合'; 
                             let itemsCount = block.content.items ? block.content.items.length : 0;
-                            desc=`包含 ${itemsCount} 个媒体附件`; 
+                            let textPreview = block.content.text ? this.stripHtml(block.content.text).substring(0, 30) + '...' : '';
+                            descHtml = `<div class="text-xs text-gray-500 mt-1.5 line-clamp-2 leading-relaxed break-all">${textPreview}<br>包含 ${itemsCount} 个媒体附件</div>`; 
                             break;
                     }
 
                     blockEl.innerHTML = `
-                        <div class="flex items-start gap-3 w-full overflow-hidden">
-                            <div class="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100">
-                                <i class="fas ${icon} text-lg"></i>
+                        <div class="flex items-start gap-4 w-full overflow-hidden">
+                            <div class="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100 shadow-sm opacity-90">
+                                <i class="fas ${icon} text-xl"></i>
                             </div>
                             <div class="flex flex-col flex-1 overflow-hidden mt-0.5">
-                                <span class="font-bold text-gray-800 text-sm truncate">${this.escapeHtml(title)}</span>
-                                <span class="text-xs text-gray-400 mt-1 truncate">${this.escapeHtml(desc)}</span>
+                                <span class="font-bold text-gray-800 text-sm truncate pr-2">${this.escapeHtml(title)}</span>
+                                ${descHtml}
                             </div>
                         </div>
-                        <div class="flex justify-end w-full mt-2 border-t border-gray-50 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="app.removeBlock('${block.id}')" class="text-xs text-red-500 hover:text-red-600 flex items-center bg-red-50 hover:bg-red-100 px-2 py-1 rounded transition-colors">
-                                <i class="fas fa-trash-alt mr-1"></i>删除
+                        <div class="flex justify-end w-full mt-3 border-t border-gray-50 pt-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="app.removeBlock('${block.id}')" class="text-xs text-red-500 hover:text-red-600 flex items-center bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                                <i class="fas fa-trash-alt mr-1.5"></i>删除
                             </button>
                         </div>
                     `;
@@ -1332,9 +1361,16 @@
                 });
             },
 
-            // 主界面发布流的拖拽排序逻辑
-            handleMainDragStart(e, index) { this.state.draggedMainIndex = index; e.dataTransfer.effectAllowed = "move"; e.target.classList.add('sortable-ghost'); },
-            handleMainDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; },
+            // ================= 发布流原生 H5 拖拽支持 =================
+            handleMainDragStart(e, index) { 
+                this.state.draggedMainIndex = index; 
+                e.dataTransfer.effectAllowed = "move"; 
+                e.target.classList.add('sortable-ghost'); 
+            },
+            handleMainDragOver(e) { 
+                e.preventDefault(); 
+                e.dataTransfer.dropEffect = "move"; 
+            },
             handleMainDrop(e, targetIndex) {
                 e.preventDefault(); 
                 const sourceIndex = this.state.draggedMainIndex;
@@ -1345,7 +1381,10 @@
                     this.renderBlocks();
                 }
             },
-            handleMainDragEnd(e) { e.target.classList.remove('sortable-ghost'); this.state.draggedMainIndex = null; },
+            handleMainDragEnd(e) { 
+                e.target.classList.remove('sortable-ghost'); 
+                this.state.draggedMainIndex = null; 
+            },
 
             renderLiveH5() {
                 document.title = "在线查阅系统";
@@ -1388,7 +1427,7 @@
                 container.innerHTML = html;
             },
 
-            // ================= 核心渲染：二维码引擎 =================
+            // ================= 核心渲染：二维码生成引擎 (完美1/5比例) =================
             renderQR() {
                 const qrContainer = document.getElementById('qrcode'); 
                 qrContainer.innerHTML = '';
@@ -1438,7 +1477,7 @@
                     const btn = event.currentTarget; 
                     const oldHtml = btn.innerHTML;
                     
-                    btn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> 已成功复制'; 
+                    btn.innerHTML = '<i class="fas fa-check-circle mr-1"></i> 复制成功'; 
                     btn.classList.replace('bg-primary', 'bg-green-500');
                     
                     setTimeout(() => { 
