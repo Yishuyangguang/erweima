@@ -80,7 +80,7 @@ export default {
       }
     }
 
-    // [核心突破] 2.1 超大文件分片上传 - 初始化 (Multipart Init)
+    // 2.1 超大文件分片上传 - 初始化 (Multipart Init)
     if (path === '/api/upload/init' && method === 'POST') {
       if (!checkAuth(request)) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
       try {
@@ -101,7 +101,7 @@ export default {
       }
     }
 
-    // [核心突破] 2.2 超大文件分片上传 - 流式直存块 (Multipart Part)
+    // 2.2 超大文件分片上传 - 流式直存块 (Multipart Part)
     if (path === '/api/upload/part' && method === 'POST') {
       if (!checkAuth(request)) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
       try {
@@ -111,8 +111,6 @@ export default {
         const partNumber = parseInt(urlObj.searchParams.get('partNumber'));
 
         const multipartUpload = env.BUCKET.resumeMultipartUpload(key, uploadId);
-        
-        // request.body 这是一个 ReadableStream，直接通过流灌入 R2，绕过 Worker 的内存限制实现 0 内存传输
         const part = await multipartUpload.uploadPart(partNumber, request.body);
         
         return new Response(JSON.stringify({ success: true, part }), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
@@ -121,7 +119,7 @@ export default {
       }
     }
 
-    // [核心突破] 2.3 超大文件分片上传 - 秒级合并 (Multipart Complete)
+    // 2.3 超大文件分片上传 - 秒级合并 (Multipart Complete)
     if (path === '/api/upload/complete' && method === 'POST') {
       if (!checkAuth(request)) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
       try {
