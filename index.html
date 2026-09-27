@@ -86,7 +86,7 @@
         </button>
     </header>
 
-    <!-- PC端管理工作区 (废除了右侧栏，主界面居中霸屏，视野极其开阔) -->
+    <!-- PC端管理工作区 (废除了右侧大面板，主界面彻底居中霸屏，视野极其开阔) -->
     <main class="w-full max-w-[1100px] flex flex-col gap-8 admin-only px-4 mx-auto">
         
         <!-- 上方输入面板 -->
@@ -109,19 +109,20 @@
                 </div>
             </div>
 
-            <!-- 下方流水线区：一物一码的全新卡片展示 -->
+            <!-- 下方流水线区：一物一码的全新极简卡片展示 -->
             <div class="bg-white rounded-2xl shadow-sm p-8 min-h-[400px]">
                 <div class="flex justify-between items-center mb-8 border-b border-gray-100 pb-5">
                     <div>
                         <h3 class="text-xl font-bold text-gray-800 tracking-wide">当前在线流 <span class="text-sm text-primary ml-2 font-normal">一物一码独立分发</span></h3>
-                        <p class="text-xs text-gray-400 mt-1">每个内容卡片都有专属二维码，扫码仅呈现该内容，互不干扰</p>
+                        <p class="text-xs text-gray-400 mt-1">每个内容卡片都有专属二维码，高度自适应，美观紧凑</p>
                     </div>
                     <button onclick="app.syncToCloud()" class="bg-green-500 text-white px-6 py-2.5 text-sm rounded-lg hover:bg-green-600 transition-all shadow-[0_4px_14px_0_rgba(34,197,94,0.39)] hover:-translate-y-0.5 font-bold tracking-wider">
                         <i class="fas fa-cloud-upload-alt mr-2"></i> 同步至云端
                     </button>
                 </div>
-                <!-- 卡片容器改为单列，纵向宽体排版 -->
-                <div id="blocks-container" class="flex flex-col gap-6 w-full"></div>
+                
+                <!-- 【核心重构：横向并排小卡片网格】 -->
+                <div id="blocks-container" class="grid grid-cols-1 xl:grid-cols-2 gap-5 w-full"></div>
             </div>
         </section>
 
@@ -217,7 +218,7 @@
         <i class="fas fa-power-off text-xl"></i>
     </button>
 
-    <!-- 管理员登录弹窗 (纯净版，剔除冗余文字) -->
+    <!-- 管理员登录弹窗 (完美净化版) -->
     <div id="login-modal" class="fixed inset-0 bg-black/60 z-[200] hidden flex items-center justify-center backdrop-blur-sm">
         <div class="bg-white rounded-2xl p-8 w-80 shadow-2xl transform transition-all relative">
             <h3 class="text-2xl font-black mb-8 text-center text-gray-800 tracking-wide">系统鉴权</h3>
@@ -253,11 +254,12 @@
                 liveUrl: window.location.origin + window.location.pathname, // 基础域名，不带参数
                 comboDraft: { title: '', text: '', items: [] },
                 
+                // 拖拽相关状态记录
                 draggedItemIndex: null,
                 draggedMainIndex: null,
                 
                 isLiveMode: false,
-                // 网址双轨制状态 (加入 isStatic 标记)
+                // 网址双轨制状态
                 urlConfig: { mode: 'live', staticUrl: '' }
             },
 
@@ -609,7 +611,6 @@
 
             // ================= 游客端 针对单个文件的一键打包下载 (智能隔离) =================
             async downloadAllFiles() {
-                // 读取当前展示的单一 ID
                 const urlParams = new URLSearchParams(window.location.search);
                 const blockId = urlParams.get('id');
                 
@@ -1067,7 +1068,6 @@
                         if (isStaticUrl) {
                             this.addBlockToState('url', { url: val, isStatic: true }); 
                         } else {
-                            // 活码模式向下兼容
                             this.addBlockToState(mode, val);
                         }
                         document.getElementById('input-data').value = ''; 
@@ -1095,8 +1095,6 @@
                         target.content.items.forEach(item => this.deleteCloudFile(item.url));
                     } else if (target.content.url) {
                         this.deleteCloudFile(target.content.url);
-                    } else if (target.type === 'url' && target.content.isStatic) {
-                        // 静态网址没有云端物理文件，无需 deleteCloudFile
                     }
                 }
                 this.state.blocks = this.state.blocks.filter(b => b.id !== id);
@@ -1143,7 +1141,6 @@
                 let html = '';
                 const baseClass = isLive ? 'w-full mb-6 bg-white p-6 rounded-[20px] shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-gray-100 overflow-hidden' : 'flex-1';
                 
-                // 兼容处理静态URL格式
                 const isStaticUrl = block.type === 'url' && typeof block.content === 'object' && block.content.isStatic;
                 const urlString = isStaticUrl ? block.content.url : block.content;
 
@@ -1152,27 +1149,15 @@
                     let comboInner = '';
                     
                     if (c.title) {
-                        comboInner += `
-                            <h2 class="text-2xl font-black text-gray-800 mb-4 leading-tight">
-                                ${this.escapeHtml(c.title)}
-                            </h2>
-                        `;
+                        comboInner += `<h2 class="text-2xl font-black text-gray-800 mb-4 leading-tight">${this.escapeHtml(c.title)}</h2>`;
                     }
                     if (c.text) {
-                        comboInner += `
-                            <div class="leading-relaxed mb-6 opacity-95 break-words rich-text-content text-[15px]">
-                                ${c.text}
-                            </div>
-                        `;
+                        comboInner += `<div class="leading-relaxed mb-6 opacity-95 break-words rich-text-content text-[15px]">${c.text}</div>`;
                     }
                     if (c.items && c.items.length > 0) {
                         comboInner += `<div class="flex flex-col gap-4 mt-5 border-t border-gray-100 pt-6">`;
                         c.items.forEach(item => { 
-                            comboInner += `
-                                <div class="rounded-xl overflow-hidden shadow-sm border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-md transition-all">
-                                    ${this.generateBlockHtml({type: item.type, content: item}, false)}
-                                </div>
-                            `; 
+                            comboInner += `<div class="rounded-xl overflow-hidden shadow-sm border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-md transition-all">${this.generateBlockHtml({type: item.type, content: item}, false)}</div>`; 
                         });
                         comboInner += `</div>`;
                     }
@@ -1187,89 +1172,40 @@
 
                 switch (block.type) {
                     case 'text': 
-                        html = `
-                            <div class="${baseClass}">
-                                <p class="text-gray-800 whitespace-pre-wrap leading-relaxed text-[15px]">${this.escapeHtml(block.content)}</p>
-                            </div>
-                        `; 
+                        html = `<div class="${baseClass}"><p class="text-gray-800 whitespace-pre-wrap leading-relaxed text-[15px]">${this.escapeHtml(block.content)}</p></div>`; 
                         break;
                     case 'url': 
-                        html = `
-                            <div class="${baseClass}">
-                                <a href="${this.escapeHtml(urlString)}" target="_blank" class="text-blue-500 underline flex items-center break-all hover:text-blue-600 transition-colors font-bold text-[15px]">
-                                    <i class="fas fa-external-link-alt mr-2 shrink-0"></i> ${this.escapeHtml(urlString)}
-                                </a>
-                            </div>
-                        `; 
+                        html = `<div class="${baseClass}"><a href="${this.escapeHtml(urlString)}" target="_blank" class="text-blue-500 underline flex items-center break-all hover:text-blue-600 transition-colors font-bold text-[15px]"><i class="fas fa-external-link-alt mr-2 shrink-0"></i> ${this.escapeHtml(urlString)}</a></div>`; 
                         break;
                     case 'image': 
-                        html = `
-                            <div class="${baseClass} p-0">
-                                <img src="${block.content.url}" class="w-full rounded-xl cursor-pointer hover:opacity-90 hover:shadow-lg transition-all object-cover max-h-[500px]" onclick="app.openDocumentPreview('${block.content.url}', '${block.content.name}')">
-                            </div>
-                        `; 
+                        html = `<div class="${baseClass} p-0"><img src="${block.content.url}" class="w-full rounded-xl cursor-pointer hover:opacity-90 hover:shadow-lg transition-all object-cover max-h-[500px]" onclick="app.openDocumentPreview('${block.content.url}', '${block.content.name}')"></div>`; 
                         break;
                     case 'audio': 
-                        html = `
-                            <div class="${baseClass} flex flex-col p-5 bg-gray-50 rounded-2xl border border-gray-100">
-                                <span class="text-[15px] font-bold text-gray-800 mb-4 truncate px-2 border-l-4 border-green-500 pl-3 leading-none flex items-center">
-                                    <i class="fas fa-music text-green-500 mr-2.5 text-lg"></i>${block.content.name}
-                                </span>
-                                <audio controls src="${block.content.url}" class="w-full outline-none h-12 rounded-full bg-white shadow-sm border border-gray-200"></audio>
-                            </div>
-                        `; 
+                        html = `<div class="${baseClass} flex flex-col p-5 bg-gray-50 rounded-2xl border border-gray-100"><span class="text-[15px] font-bold text-gray-800 mb-4 truncate px-2 border-l-4 border-green-500 pl-3 leading-none flex items-center"><i class="fas fa-music text-green-500 mr-2.5 text-lg"></i>${block.content.name}</span><audio controls src="${block.content.url}" class="w-full outline-none h-12 rounded-full bg-white shadow-sm border border-gray-200"></audio></div>`; 
                         break;
                     case 'video': 
-                        html = `
-                            <div class="${baseClass} bg-black flex justify-center p-0 m-0 relative group rounded-2xl overflow-hidden shadow-inner">
-                                <video src="${block.content.url}" controls class="w-full max-h-[450px] object-contain"></video>
-                            </div>
-                        `; 
+                        html = `<div class="${baseClass} bg-black flex justify-center p-0 m-0 relative group rounded-2xl overflow-hidden shadow-inner"><video src="${block.content.url}" controls class="w-full max-h-[450px] object-contain"></video></div>`; 
                         break;
                     case 'document': 
-                        html = `
-                            <div class="${baseClass} flex items-center bg-gray-50 rounded-2xl p-5 hover:bg-white transition-colors border border-gray-100">
-                                <div class="w-14 h-14 bg-white shadow-sm text-red-500 rounded-xl flex items-center justify-center mr-4 shrink-0 border border-gray-100">
-                                    <i class="fas fa-file-pdf text-3xl"></i>
-                                </div>
-                                <div class="flex flex-col flex-1 overflow-hidden mr-4">
-                                    <span class="text-[15px] font-bold text-gray-800 truncate">${block.content.name}</span>
-                                    <span class="text-xs text-gray-400 mt-1.5 font-medium">${block.content.size} · 点击右侧全屏预览</span>
-                                </div>
-                                <div class="flex flex-col gap-2.5 shrink-0">
-                                    <button onclick="app.openDocumentPreview('${block.content.url}', '${block.content.name}')" class="text-xs bg-gray-200 px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-300 font-bold transition-all shadow-sm">全屏查看</button>
-                                    <a href="${block.content.url}" download class="text-xs bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-center font-bold shadow-md">
-                                        <i class="fas fa-download mr-1"></i>下载
-                                    </a>
-                                </div>
-                            </div>
-                        `; 
+                        html = `<div class="${baseClass} flex items-center bg-gray-50 rounded-2xl p-5 hover:bg-white transition-colors border border-gray-100"><div class="w-14 h-14 bg-white shadow-sm text-red-500 rounded-xl flex items-center justify-center mr-4 shrink-0 border border-gray-100"><i class="fas fa-file-pdf text-3xl"></i></div><div class="flex flex-col flex-1 overflow-hidden mr-4"><span class="text-[15px] font-bold text-gray-800 truncate">${block.content.name}</span><span class="text-xs text-gray-400 mt-1.5 font-medium">${block.content.size} · 点击右侧全屏预览</span></div><div class="flex flex-col gap-2.5 shrink-0"><button onclick="app.openDocumentPreview('${block.content.url}', '${block.content.name}')" class="text-xs bg-gray-200 px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-300 font-bold transition-all shadow-sm">全屏查看</button><a href="${block.content.url}" download class="text-xs bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-center font-bold shadow-md"><i class="fas fa-download mr-1"></i>下载</a></div></div>`; 
                         break;
                     case 'form': 
-                        html = `
-                            <div class="${baseClass} border-2 border-dashed border-indigo-200 bg-indigo-50/50 p-8 relative overflow-hidden rounded-2xl">
-                                <div class="absolute -right-8 -top-8 w-32 h-32 bg-indigo-100 rounded-full opacity-40"></div>
-                                <h4 class="font-black text-indigo-900 mb-6 text-center text-xl relative z-10 tracking-wide">${this.escapeHtml(block.content.title)}</h4>
-                                <input type="text" placeholder="您的姓名" class="w-full p-3.5 mb-4 border border-white rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-indigo-300 text-[15px] font-medium relative z-10">
-                                <input type="tel" placeholder="联系方式" class="w-full p-3.5 mb-6 border border-white rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-indigo-300 text-[15px] font-medium relative z-10">
-                                <button class="w-full bg-indigo-500 text-white py-3.5 rounded-xl shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] hover:bg-indigo-600 hover:-translate-y-0.5 transition-all font-bold text-lg relative z-10 tracking-widest">安全提交数据</button>
-                            </div>
-                        `; 
+                        html = `<div class="${baseClass} border-2 border-dashed border-indigo-200 bg-indigo-50/50 p-8 relative overflow-hidden rounded-2xl"><div class="absolute -right-8 -top-8 w-32 h-32 bg-indigo-100 rounded-full opacity-40"></div><h4 class="font-black text-indigo-900 mb-6 text-center text-xl relative z-10 tracking-wide">${this.escapeHtml(block.content.title)}</h4><input type="text" placeholder="您的姓名" class="w-full p-3.5 mb-4 border border-white rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-indigo-300 text-[15px] font-medium relative z-10"><input type="tel" placeholder="联系方式" class="w-full p-3.5 mb-6 border border-white rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-indigo-300 text-[15px] font-medium relative z-10"><button class="w-full bg-indigo-500 text-white py-3.5 rounded-xl shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] hover:bg-indigo-600 hover:-translate-y-0.5 transition-all font-bold text-lg relative z-10 tracking-widest">安全提交数据</button></div>`; 
                         break;
                 }
                 return html;
             },
 
-            // ================= 核心渲染：发布流降维大卡片展示 (完美适配要求：宽大卡片/提取摘要/内嵌二维码) =================
+            // ================= 核心渲染：发布流扁平横穿排版 =================
             renderBlocks() {
                 const container = document.getElementById('blocks-container');
                 if (!container) return;
                 
                 if (this.state.blocks.length === 0) {
                     container.innerHTML = `
-                        <div class="flex flex-col items-center justify-center h-56 text-gray-400 w-full col-span-full">
-                            <i class="fas fa-layer-group text-6xl mb-5 opacity-30"></i>
-                            <p class="text-base font-medium tracking-widest">流水线空空如也</p>
+                        <div class="flex flex-col items-center justify-center h-48 text-gray-400 w-full col-span-full">
+                            <i class="fas fa-layer-group text-5xl mb-4 opacity-40"></i>
+                            <p class="text-sm font-medium">内容流水线为空，请在上方添加模块</p>
                         </div>
                     `; 
                     return;
@@ -1280,8 +1216,8 @@
                 this.state.blocks.forEach((block, index) => {
                     const blockEl = document.createElement('div');
                     blockEl.draggable = true;
-                    // 解除高度锁死：min-h-[120px] 自动适配文字高度，配合 xl:grid-cols-2 双栏超大卡片
-                    blockEl.className = 'block-animate bg-white border border-gray-100 rounded-[20px] p-6 flex flex-col md:flex-row justify-between items-center group relative shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all min-h-[140px] h-auto border-l-[5px] border-l-primary cursor-move gap-6';
+                    // 【解封高度，采用 Flex-Row 横向贯穿布局】
+                    blockEl.className = 'block-animate bg-white border border-gray-100 rounded-[20px] p-5 flex flex-row justify-between items-center group relative shadow-sm hover:shadow-md transition-all min-h-[110px] h-auto border-l-4 border-l-primary cursor-move gap-5';
                     
                     blockEl.ondragstart = (e) => this.handleMainDragStart(e, index); 
                     blockEl.ondragover = (e) => this.handleMainDragOver(e); 
@@ -1299,38 +1235,37 @@
                         case 'text': 
                             icon='fa-font text-blue-500'; 
                             title='文本段落'; 
-                            // 放宽至 3 行显示，彻底透出内部内容
-                            descHtml = `<div class="text-[14px] text-gray-500 mt-2.5 line-clamp-3 leading-relaxed break-all font-medium">${this.escapeHtml(block.content)}</div>`; 
+                            descHtml = `<div class="text-[14px] text-gray-500 mt-2 line-clamp-3 leading-relaxed break-all font-medium">${this.escapeHtml(block.content)}</div>`; 
                             break;
                         case 'url': 
                             icon='fa-link text-blue-500'; 
                             title=isStaticUrl ? '静态直达链接' : '动态活码链接'; 
-                            descHtml = `<div class="text-[14px] text-blue-400 mt-2.5 break-all line-clamp-2 font-medium">${this.escapeHtml(urlString)}</div>`; 
+                            descHtml = `<div class="text-[14px] text-blue-400 mt-2 break-all line-clamp-2 font-medium">${this.escapeHtml(urlString)}</div>`; 
                             break;
                         case 'image': 
                             icon='fa-image text-green-500'; 
                             title='图片资源'; 
-                            descHtml = `<div class="text-[14px] text-gray-500 mt-2.5 break-words font-medium">${this.escapeHtml(block.content.name)}</div>`; 
+                            descHtml = `<div class="text-[14px] text-gray-500 mt-2 break-words font-medium">${this.escapeHtml(block.content.name)}</div>`; 
                             break;
                         case 'audio': 
                             icon='fa-music text-yellow-500'; 
                             title='音频文件'; 
-                            descHtml = `<div class="text-[14px] text-gray-500 mt-2.5 break-words font-medium">${this.escapeHtml(block.content.name)}</div>`; 
+                            descHtml = `<div class="text-[14px] text-gray-500 mt-2 break-words font-medium">${this.escapeHtml(block.content.name)}</div>`; 
                             break;
                         case 'video': 
                             icon='fa-video text-purple-500'; 
                             title='视频文件'; 
-                            descHtml = `<div class="text-[14px] text-gray-500 mt-2.5 break-words font-medium">${this.escapeHtml(block.content.name)}</div>`; 
+                            descHtml = `<div class="text-[14px] text-gray-500 mt-2 break-words font-medium">${this.escapeHtml(block.content.name)}</div>`; 
                             break;
                         case 'document': 
                             icon='fa-file-pdf text-red-500'; 
                             title='文档附件'; 
-                            descHtml = `<div class="text-[14px] text-gray-500 mt-2.5 break-words font-medium">${this.escapeHtml(block.content.name)}</div>`; 
+                            descHtml = `<div class="text-[14px] text-gray-500 mt-2 break-words font-medium">${this.escapeHtml(block.content.name)}</div>`; 
                             break;
                         case 'form': 
                             icon='fa-list-check text-indigo-500'; 
                             title='数据表单'; 
-                            descHtml = `<div class="text-[14px] text-gray-500 mt-2.5 break-words font-medium">${this.escapeHtml(block.content.title)}</div>`; 
+                            descHtml = `<div class="text-[14px] text-gray-500 mt-2 break-words font-medium">${this.escapeHtml(block.content.title)}</div>`; 
                             break;
                         case 'combo': 
                             icon='fa-cubes text-primary'; 
@@ -1338,50 +1273,49 @@
                             let itemsCount = block.content.items ? block.content.items.length : 0;
                             let textPreview = block.content.text ? this.stripHtml(block.content.text) : '';
                             descHtml = `
-                                <div class="text-[14px] text-gray-500 mt-2.5 line-clamp-2 leading-relaxed break-all font-medium">${textPreview}</div>
-                                <div class="mt-2.5"><span class="inline-block font-bold text-primary bg-blue-50 px-2.5 py-1 rounded-md text-[11px] tracking-wide">包含 ${itemsCount} 个多媒体附件</span></div>
+                                <div class="text-[14px] text-gray-500 mt-2 line-clamp-2 leading-relaxed break-all font-medium">${textPreview}</div>
+                                <div class="mt-2"><span class="inline-block font-bold text-primary bg-blue-50 px-2 py-0.5 rounded-md text-[11px] tracking-wide">包含 ${itemsCount} 个媒体附件</span></div>
                             `; 
                             break;
                     }
 
-                    // 右侧独立的微型二维码控制逻辑
                     let targetUrl = this.state.liveUrl + '?view=live&id=' + block.id;
                     if (isStaticUrl) {
                         targetUrl = urlString;
                     }
 
+                    // 【核心设计：左侧无尽延伸，右侧极端封锁】
                     blockEl.innerHTML = `
-                        <!-- 左侧：宽大内容展示区 -->
-                        <div class="flex items-start gap-5 flex-1 w-full overflow-hidden">
+                        <!-- 左侧：解放宽度的横向延伸内容区 -->
+                        <div class="flex items-start gap-4 flex-1 min-w-0 py-1">
                             <div class="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100 shadow-inner mt-1">
                                 <i class="fas ${icon} text-2xl"></i>
                             </div>
-                            <div class="flex flex-col flex-1 min-w-0 pr-4">
-                                <!-- 取消 truncate，使用 break-words 换行显示超长标题 -->
-                                <span class="font-black text-gray-800 text-lg break-words leading-snug tracking-wide">${this.escapeHtml(title)}</span>
+                            <div class="flex flex-col flex-1 min-w-0 pr-6">
+                                <span class="font-black text-gray-800 text-[17px] break-words leading-snug tracking-wide">${this.escapeHtml(title)}</span>
                                 ${descHtml}
                             </div>
                         </div>
                         
-                        <!-- 右侧：内嵌的独立微型二维码组件 -->
-                        <div class="shrink-0 w-[170px] bg-gray-50 rounded-2xl p-3 border border-gray-100 flex flex-col items-center shadow-sm">
-                            <div id="qrcode-${block.id}" class="w-[120px] h-[120px] bg-white rounded-xl flex items-center justify-center p-1.5 border border-gray-100 shadow-sm"></div>
-                            <p class="text-[10px] text-gray-400 mt-2.5 mb-2.5 text-center leading-tight font-medium">此处扫码查看该内容<br>(一物一码独立分发)</p>
-                            <div class="flex gap-2 w-full">
-                                <button onclick="app.copyBlockLink('${block.id}', ${isStaticUrl}, '${urlString}')" class="flex-1 bg-primary text-white py-2 rounded-lg hover:bg-blue-600 transition-all text-xs font-bold shadow-sm">复制</button>
-                                <button onclick="app.downloadBlockQR('${block.id}')" class="flex-1 bg-white border border-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition-all text-xs font-bold shadow-sm">下载</button>
+                        <!-- 右侧：内嵌的极其紧凑的微型二维码底座 (宽度死锁在160px左右) -->
+                        <div class="shrink-0 w-[155px] bg-gray-50 rounded-[14px] p-2.5 border border-gray-100 flex flex-col items-center shadow-sm" onmousedown="event.stopPropagation();">
+                            <div id="qrcode-${block.id}" class="w-[96px] h-[96px] bg-white rounded-xl flex items-center justify-center p-1 border border-gray-100 shadow-sm"></div>
+                            <p class="text-[9px] text-gray-400 mt-2 mb-2 text-center leading-tight font-medium tracking-wide">此处扫码查看该内容<br>(一物一码独立分发)</p>
+                            <div class="flex gap-1.5 w-full">
+                                <button onclick="app.copyBlockLink('${block.id}', ${isStaticUrl}, '${urlString}')" class="flex-1 bg-primary text-white py-1.5 rounded-[6px] hover:bg-blue-600 transition-all text-[11px] font-bold shadow-sm">复制</button>
+                                <button onclick="app.downloadBlockQR('${block.id}')" class="flex-1 bg-white border border-gray-200 text-gray-700 py-1.5 rounded-[6px] hover:bg-gray-50 transition-all text-[11px] font-bold shadow-sm">下载</button>
                             </div>
                         </div>
                         
-                        <!-- 悬浮删除按钮 (移至左下角或悬浮右上) -->
-                        <button onclick="app.removeBlock('${block.id}')" class="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white shadow-lg border border-red-100">
-                            <i class="fas fa-times"></i>
+                        <!-- 右上角悬浮红色小叉号 -->
+                        <button onclick="app.removeBlock('${block.id}')" class="absolute -top-2.5 -right-2.5 w-7 h-7 rounded-full bg-white text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white shadow-md border border-gray-100 z-10">
+                            <i class="fas fa-times text-sm"></i>
                         </button>
                     `;
                     container.appendChild(blockEl);
                 });
 
-                // DOM 挂载后，批量静默生成每张小卡片专属的二维码
+                // 批量静默渲染小尺寸的高清二维码
                 setTimeout(() => {
                     this.state.blocks.forEach(block => {
                         const isStaticUrl = block.type === 'url' && typeof block.content === 'object' && block.content.isStatic;
@@ -1394,8 +1328,8 @@
                         if (qrBox) {
                             new QRCode(qrBox, {
                                 text: targetUrl,
-                                width: 108,
-                                height: 108,
+                                width: 88, // 配合 96px 外框
+                                height: 88,
                                 colorDark : '#111827',
                                 colorLight : '#ffffff',
                                 correctLevel : QRCode.CorrectLevel.M
@@ -1403,7 +1337,7 @@
                             
                             setTimeout(() => {
                                 const canvas = qrBox.querySelector('canvas');
-                                if(canvas) canvas.style.borderRadius = '0.35rem';
+                                if(canvas) canvas.style.borderRadius = '0.25rem';
                             }, 50);
                         }
                     });
@@ -1458,7 +1392,7 @@
                     const oldHtml = btn.innerHTML;
                     btn.innerHTML = '<i class="fas fa-check"></i>'; 
                     btn.classList.replace('bg-primary', 'bg-green-500');
-                    btn.classList.replace('text-primary', 'text-green-500'); // 针对下载按钮底色为白色的兼容
+                    btn.classList.replace('text-primary', 'text-green-500'); 
                     setTimeout(() => { 
                         btn.innerHTML = oldHtml; 
                         btn.classList.replace('bg-green-500', 'bg-primary'); 
@@ -1472,7 +1406,6 @@
                 document.title = "在线查阅系统";
                 const container = document.getElementById('mobile-live-container');
                 
-                // 核心：基于一物一码架构，只拦截并渲染当前 ID 对应的 block
                 const urlParams = new URLSearchParams(window.location.search);
                 const blockId = urlParams.get('id');
                 
