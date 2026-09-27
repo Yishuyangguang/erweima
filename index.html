@@ -56,18 +56,13 @@
             border: 1px dashed #1E90FF; 
         }
         
-        /* 移动端 H5 底部安全区，防止被悬浮按钮遮挡 */
+        /* 移动端 H5 底部安全区 */
         .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom) + 100px); }
 
         /* 富文本编辑器内部基础排版适配 */
         .rich-text-content b { font-weight: bold; }
         .rich-text-content i { font-style: italic; }
         .rich-text-content u { text-decoration: underline; }
-
-        /* AI艺术码瀑布流卡片特效 - 设计师美化重构版 */
-        .ai-template-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .ai-template-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -8px rgba(0,0,0,0.15); }
-        .ai-template-card.active { border: 3px solid #1E90FF; transform: scale(0.96); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-8 px-4" id="drop-zone">
@@ -86,22 +81,17 @@
             <i class="fas fa-cubes text-sm mr-2"></i>组合上传
         </button>
 
-        <!-- AI艺术码入口 -->
-        <button onclick="app.setMode('ai_art')" class="nav-btn bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-2 rounded-full shadow-md hover:shadow-lg transition-all text-white font-semibold flex items-center">
-            <i class="fas fa-magic text-sm mr-2"></i>AI艺术码
-        </button>
-
         <button onclick="app.setMode('uploaded')" class="nav-btn bg-blue-50 border border-blue-100 px-5 py-2 rounded-full shadow-sm hover:shadow-md transition-all text-primary font-semibold flex items-center">
             <i class="fas fa-cloud text-sm mr-2"></i>已上传
         </button>
     </header>
 
-    <!-- PC端管理工作区 (4列网格，极致压榨空间给左侧编辑区) -->
-    <main class="w-full max-w-[1400px] grid grid-cols-1 lg:grid-cols-4 gap-8 admin-only px-4">
+    <!-- PC端管理工作区 (升级为5列网格，极致压榨空间：左4右1) -->
+    <main class="w-full max-w-[1400px] grid grid-cols-1 lg:grid-cols-5 gap-8 admin-only px-4">
         
-        <!-- 左侧编辑/任务区域占据 3/4 空间 -->
-        <section class="lg:col-span-3 flex flex-col gap-6 relative">
-            <div id="input-panel" class="bg-white rounded-2xl shadow-soft p-8 relative border-2 border-dashed border-transparent transition-all">
+        <!-- 左侧编辑/任务区域占据 4/5 (80%) 空间 -->
+        <section class="lg:col-span-4 flex flex-col gap-6 relative">
+            <div id="input-panel" class="bg-white rounded-2xl shadow-sm p-8 relative border-2 border-dashed border-transparent transition-all">
                 <div class="flex justify-between items-center mb-6" id="panel-header">
                     <h2 id="panel-title" class="text-xl font-bold text-gray-800 tracking-wide">
                         <i class="fas fa-keyboard text-primary mr-2"></i>添加文本
@@ -117,7 +107,7 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl shadow-soft p-8 min-h-[350px]">
+            <div class="bg-white rounded-2xl shadow-sm p-8 min-h-[350px]">
                 <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
                     <h3 class="text-lg font-bold text-gray-800">当前在线流 (扫码可见)</h3>
                     <button onclick="app.syncToCloud()" class="bg-green-500 text-white px-5 py-2 text-sm rounded-lg hover:bg-green-600 transition-all shadow font-medium">
@@ -128,14 +118,12 @@
             </div>
         </section>
 
-        <!-- 右侧二维码区域占据 1/4 空间，体积缩小更加精致 -->
+        <!-- 右侧二维码区域占据 1/5 (20%) 空间，极限压缩位置 -->
         <aside class="w-full flex flex-col gap-4 relative lg:col-span-1">
-            <div class="bg-white rounded-2xl shadow-soft p-6 flex flex-col items-center sticky top-8 border border-gray-50">
+            <div class="bg-white rounded-2xl shadow-sm p-6 flex flex-col items-center sticky top-8 border border-gray-50">
                 
-                <!-- 极限缩小的二维码底座 -->
-                <div id="qrcode-wrapper" class="w-36 h-36 bg-white flex items-center justify-center rounded-2xl mb-5 relative transition-all mt-2 shadow-sm border border-gray-100 overflow-hidden">
-                    <div id="qrcode" class="z-10 relative flex items-center justify-center w-full h-full p-2"></div>
-                    <div id="ai-qr-bg" class="absolute inset-0 w-full h-full z-0 hidden bg-cover bg-center opacity-100"></div>
+                <div id="qrcode-wrapper" class="w-36 h-36 bg-white flex items-center justify-center rounded-xl mb-4 relative transition-all mt-2 border border-gray-100 p-1.5">
+                    <div id="qrcode" class="z-10 relative flex items-center justify-center w-full h-full"></div>
                 </div>
                 
                 <div id="qr-desc-text" class="text-center mb-6 w-full">
@@ -143,19 +131,14 @@
                     <p class="text-[11px] text-gray-400 leading-tight tracking-wide">(内容修改自动同步，图案永久不变)</p>
                 </div>
                 
-                <div class="flex flex-col gap-3 w-full">
-                    <button onclick="app.generateShareLink()" class="w-full bg-primary text-white px-4 py-2.5 rounded-xl hover:bg-blue-600 shadow transition-all text-sm font-semibold flex items-center justify-center">
-                        <i class="fas fa-share-nodes mr-2"></i> 复制专属链接
+                <!-- 功能按钮合并为一行 -->
+                <div class="flex gap-2 w-full">
+                    <button onclick="app.generateShareLink()" class="flex-1 bg-primary text-white py-2.5 rounded-lg hover:bg-blue-600 shadow-sm transition-all text-[13px] font-semibold flex items-center justify-center">
+                        <i class="fas fa-link mr-1.5"></i> 复制链接
                     </button>
-                    
-                    <div class="flex gap-2 w-full">
-                        <button onclick="app.downloadQR()" class="flex-1 bg-white border border-gray-200 text-gray-700 px-2 py-2 rounded-xl hover:bg-gray-50 hover:text-primary transition-all text-sm font-semibold flex items-center justify-center shadow-sm">
-                            <i class="fas fa-download mr-1.5 text-gray-400"></i> 下载
-                        </button>
-                        <button onclick="app.openBeautifyModal()" class="flex-1 bg-gradient-to-r from-fuchsia-500 to-pink-500 text-white px-2 py-2 rounded-xl hover:shadow-md hover:-translate-y-0.5 transition-all text-sm font-semibold flex items-center justify-center">
-                            <i class="fas fa-magic mr-1.5"></i> 美化
-                        </button>
-                    </div>
+                    <button onclick="app.downloadQR()" class="flex-1 bg-white border border-gray-200 text-gray-700 py-2.5 rounded-lg hover:bg-gray-50 hover:text-primary transition-all text-[13px] font-semibold flex items-center justify-center shadow-sm">
+                        <i class="fas fa-download mr-1.5"></i> 下载
+                    </button>
                 </div>
             </div>
         </aside>
@@ -164,7 +147,7 @@
     <!-- H5 游客实时预览容器 (扫码直接进入此界面) -->
     <div id="mobile-live-container" class="hidden w-full max-w-lg mx-auto bg-gray-50 min-h-screen pb-safe"></div>
 
-    <!-- 全屏图文组合编辑器 -->
+    <!-- 全屏图文组合编辑器 (已升级为富文本引擎) -->
     <div id="combo-editor-modal" class="fixed inset-0 bg-gray-100 z-[150] hidden flex-col">
         <div class="h-16 bg-white shadow-sm flex items-center justify-between px-6 border-b shrink-0">
             <h2 class="text-lg font-bold text-gray-800">
@@ -183,10 +166,10 @@
                     <input type="text" id="combo-title" placeholder="输入大标题 (选填)" class="w-full text-2xl font-bold border-none outline-none placeholder-gray-300 focus:ring-0 px-1">
                 </div>
                 
+                <!-- 全新富文本编辑器工具栏 (Toolbar) -->
                 <div class="flex flex-col">
                     <div class="flex flex-wrap gap-2 items-center bg-gray-50 p-2.5 rounded-t-lg border border-b-0 border-gray-200">
                         
-                        <!-- 字体选择 -->
                         <select onchange="app.execCmd('fontName', this.value)" class="bg-white border border-gray-300 rounded px-2 py-1 text-sm outline-none text-gray-700 cursor-pointer hover:border-primary">
                             <option value="">默认字体</option>
                             <option value="SimSun">宋体</option>
@@ -195,7 +178,6 @@
                             <option value="FangSong">仿宋</option>
                         </select>
                         
-                        <!-- 字号选择 -->
                         <select onchange="app.execCmd('fontSize', this.value)" class="bg-white border border-gray-300 rounded px-2 py-1 text-sm outline-none text-gray-700 cursor-pointer hover:border-primary">
                             <option value="">字号</option>
                             <option value="3">标准</option>
@@ -206,7 +188,6 @@
                         
                         <div class="w-px h-5 bg-gray-300 mx-1"></div>
                         
-                        <!-- 颜色拾取器 -->
                         <div class="flex items-center gap-1 cursor-pointer group relative" title="文字颜色">
                             <i class="fas fa-palette text-gray-500 group-hover:text-primary pl-1"></i>
                             <input type="color" onchange="app.execCmd('foreColor', this.value)" class="w-8 h-8 rounded border-none cursor-pointer p-0 bg-transparent">
@@ -214,7 +195,6 @@
 
                         <div class="w-px h-5 bg-gray-300 mx-1"></div>
                         
-                        <!-- 基础样式 -->
                         <button onmousedown="event.preventDefault(); app.execCmd('bold')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200 text-gray-700 font-bold transition-all" title="加粗 (Ctrl+B)">B</button>
                         <button onmousedown="event.preventDefault(); app.execCmd('italic')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200 text-gray-700 italic font-serif transition-all" title="倾斜 (Ctrl+I)">I</button>
                         <button onmousedown="event.preventDefault(); app.execCmd('underline')" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200 text-gray-700 underline transition-all" title="下划线 (Ctrl+U)">U</button>
@@ -229,12 +209,12 @@
                         <span class="text-xs text-gray-400">支持拖拽排序，向下滚动查看</span>
                     </div>
                     
-                    <ul id="combo-items-list" class="flex flex-col gap-3 mb-4 min-h-[5px]"></ul>
+                    <ul id="combo-items-list" class="flex flex-col gap-3 mb-4 min-h-[50px]"></ul>
                     
                     <div id="combo-drop-zone" class="relative w-full h-24 bg-blue-50/50 rounded-xl border-2 border-dashed border-blue-200 flex flex-col items-center justify-center hover:bg-blue-50 transition-all group">
                         <input type="file" id="combo-file-input" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="app.handleComboFileSelect(event)">
                         <i class="fas fa-plus-circle text-2xl text-blue-300 group-hover:text-primary transition-colors mb-1"></i>
-                        <p class="text-sm text-gray-500">点击或将<span class="font-semibold text-primary"> 图片/音视频/PPT/文档 </span>拖拽至此添加到组合</p>
+                        <p class="text-sm text-gray-500">点击或将<span class="font-semibold text-primary"> 图片/音视频/PPT/文档 </span>拖拽至此极速上传到组合</p>
                     </div>
                 </div>
             </div>
@@ -254,43 +234,18 @@
         <i class="fas fa-sign-out-alt"></i>
     </button>
 
-    <!-- 管理员登录弹窗 (移除了多余文字) -->
+    <!-- 管理员登录弹窗 (纯净精简版) -->
     <div id="login-modal" class="fixed inset-0 bg-black/60 z-[200] hidden flex items-center justify-center backdrop-blur-sm">
         <div class="bg-white rounded-2xl p-8 w-80 shadow-2xl transform transition-all scale-100 relative">
             <h3 class="text-xl font-bold mb-6 text-center text-gray-800">系统鉴权</h3>
             <div class="mb-5">
-                <label class="block text-xs text-gray-500 mb-2">安全校验口令</label>
+                <label class="block text-xs text-gray-500 mb-2 font-medium">安全校验口令</label>
                 <input type="password" id="admin-pwd" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="请输入密码">
             </div>
             <div class="flex gap-3">
                 <button onclick="document.getElementById('login-modal').classList.add('hidden')" class="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-all font-medium">取消</button>
                 <button onclick="app.login()" class="flex-1 py-2.5 bg-primary text-white rounded-lg hover:bg-blue-600 transition-all font-medium shadow-md">登录</button>
             </div>
-        </div>
-    </div>
-
-    <!-- 二维码美化弹窗 -->
-    <div id="beautify-modal" class="fixed inset-0 bg-black/60 z-[200] hidden flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white rounded-2xl p-6 w-80 shadow-2xl transform transition-all relative">
-            <button onclick="app.closeBeautifyModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-            <h3 class="text-xl font-bold mb-6 text-gray-800"><i class="fas fa-magic text-purple-500 mr-2"></i>二维码配色美化</h3>
-            
-            <div class="space-y-4 mb-6">
-                <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    <span class="text-sm font-medium text-gray-700">图案颜色 (前景色)</span>
-                    <input type="color" id="qr-color-dark" class="w-9 h-9 rounded border-none cursor-pointer bg-transparent">
-                </div>
-                <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    <span class="text-sm font-medium text-gray-700">背景颜色</span>
-                    <input type="color" id="qr-color-light" class="w-9 h-9 rounded border-none cursor-pointer bg-transparent">
-                </div>
-            </div>
-            
-            <button onclick="app.applyBeautify()" class="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg transition-all font-medium text-base">
-                应用美化方案
-            </button>
         </div>
     </div>
 
@@ -317,9 +272,8 @@
                 draggedItemIndex: null,
                 isLiveMode: false,
                 
-                qrConfig: { dark: '#111827', light: '#ffffff' },
-                urlConfig: { mode: 'live', staticUrl: '' },
-                aiArtConfig: { active: false, bgUrl: '' }
+                // 网址双轨制状态
+                urlConfig: { mode: 'live', staticUrl: '' }
             },
 
             configs: {
@@ -330,21 +284,8 @@
                 video: { icon: 'fa-video', title: '添加独立视频', hint: '原生UI沉浸式播放', accept: 'video/*' },
                 document: { icon: 'fa-file-word', title: '添加独立文档', hint: '支持 PPT/Word 跨设备在线预览', accept: '.doc,.docx,.ppt,.pptx,.xls,.xlsx,.pdf,.wps' },
                 form: { icon: 'fa-list-check', title: '添加表单', hint: '通用资料收集模版', accept: null },
-                uploaded: { icon: 'fa-cloud', title: '后台资源池', hint: '可查阅/清理所有已上传资产', accept: null },
-                ai_art: { icon: 'fa-magic', title: 'AI 艺术码合成', hint: '选择精美模板，一键融合二维码', accept: null }
+                uploaded: { icon: 'fa-cloud', title: '后台资源池', hint: '可查阅/清理所有已上传资产', accept: null }
             },
-
-            // AI 艺术码预设模板库
-            aiTemplates: [
-                { id: 't1', name: '池塘', bg: 'linear-gradient(135deg, #A8E6CF 0%, #DCEDC1 100%)', textDark: '#004d40' },
-                { id: 't2', name: '桃花', bg: 'linear-gradient(135deg, #FF9A9E 0%, #FECFEF 99%, #FECFEF 100%)', textDark: '#880e4f' },
-                { id: 't3', name: '迷雾城堡', bg: 'linear-gradient(135deg, #8E9EAB 0%, #EEF2F3 100%)', textDark: '#2c3e50' },
-                { id: 't4', name: '海滨城市', bg: 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)', textDark: '#003366' },
-                { id: 't5', name: '星河与你', bg: 'linear-gradient(135deg, #09203f 0%, #537895 100%)', textDark: '#ffffff' },
-                { id: 't6', name: '樱花', bg: 'linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%)', textDark: '#d81b60' },
-                { id: 't7', name: '高达机甲', bg: 'linear-gradient(135deg, #434343 0%, #000000 100%)', textDark: '#00e5ff' },
-                { id: 't8', name: '极地冰川', bg: 'linear-gradient(135deg, #E0EAFC 0%, #CFDEF3 100%)', textDark: '#1e3c72' }
-            ],
 
             async init() {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -389,7 +330,7 @@
                         document.getElementById('login-modal').classList.add('hidden');
                         this.enableAdminMode();
                     } else {
-                        alert('⚠️ 鉴权失败：密码错误，请检查您的 CF 环境变量。');
+                        alert('⚠️ 鉴权失败：密码错误，请检查您的设置。');
                     }
                 } catch (e) { 
                     alert('后端连接异常，请确认 CF Pages 部署状态'); 
@@ -470,7 +411,7 @@
                 }
             },
             
-            // ================= 【极速切片与并发网络层引擎】 =================
+            // ================= 【极速切片与并发并发网络层引擎】 =================
             async uploadFilesConcurrent(files, progressCallback) {
                 if (!this.state.isAdmin) return [];
                 
@@ -627,7 +568,7 @@
                 return tmp.textContent || tmp.innerText || "";
             },
 
-            // ================= 全局防御性文件拖拽解析 =================
+            // ================= 全局防御性文件拖拽解析 (修复报错的核心点) =================
             bindGlobalDragAndDrop() {
                 const dropZone = document.body; 
                 
@@ -640,7 +581,7 @@
                 dropZone.addEventListener('dragenter', (e) => { 
                     if (!this.state.isAdmin) return;
                     const comboModal = document.getElementById('combo-editor-modal');
-                    if (comboModal.classList.contains('hidden')) {
+                    if (comboModal && comboModal.classList.contains('hidden')) {
                         const panel = document.getElementById('input-panel');
                         if (panel) panel.classList.add('drag-active'); 
                     } else {
@@ -675,7 +616,7 @@
                         const safeEvent = { target: { files: files } };
                         const comboModal = document.getElementById('combo-editor-modal');
                         
-                        if (!comboModal.classList.contains('hidden')) {
+                        if (comboModal && !comboModal.classList.contains('hidden')) {
                             this.handleComboFileSelect(safeEvent); 
                         } else {
                             this.handleMainFileSelect(safeEvent);
@@ -956,16 +897,18 @@
                 this.closeComboEditor();
             },
 
-            // ================= 基础UI与路由管理引擎 (重构双轨网址与AI瀑布流) =================
+            // ================= 基础UI与路由管理引擎 (重构双轨网址，彻底清除AI) =================
             setMode(mode) { 
                 this.state.currentMode = mode; 
                 this.updateNavUI(); 
                 this.renderInputArea(); 
                 
-                if (mode !== 'url') this.state.urlConfig.staticUrl = '';
-                if (mode !== 'ai_art') this.state.aiArtConfig.active = false;
+                // 每次切换时，重置非通用状态
+                if (mode !== 'url') {
+                    this.state.urlConfig.staticUrl = '';
+                }
                 
-                this.renderQR();
+                this.renderQR(); // 刷新二维码以消除残留状态
             },
             
             updateNavUI() {
@@ -977,17 +920,16 @@
                 });
                 
                 const cfg = this.configs[this.state.currentMode];
-                if (document.getElementById('panel-title')) {
-                    document.getElementById('panel-title').innerHTML = `<i class="fas ${cfg.icon} text-primary mr-2"></i>${cfg.title}`;
-                }
-                if (document.getElementById('panel-hint-pill')) {
-                    document.getElementById('panel-hint-pill').innerText = cfg.hint;
-                }
+                const titleEl = document.getElementById('panel-title');
+                const hintEl = document.getElementById('panel-hint-pill');
                 
-                const addBtn = document.getElementById('btn-add-block');
+                if (titleEl) titleEl.innerHTML = `<i class="fas ${cfg.icon} text-primary mr-2"></i>${cfg.title}`;
+                if (hintEl) hintEl.innerText = cfg.hint;
+                
                 const footerAction = document.getElementById('panel-footer-action');
-                if (addBtn && footerAction) {
-                    if (this.state.currentMode === 'uploaded' || this.state.currentMode === 'ai_art' || (this.state.currentMode === 'url' && this.state.urlConfig.mode === 'static')) {
+                if (footerAction) {
+                    // 如果在已上传列表，或者处于静态网址模式，则不显示“加入流水线”按钮
+                    if (this.state.currentMode === 'uploaded' || (this.state.currentMode === 'url' && this.state.urlConfig.mode === 'static')) {
                         footerAction.style.display = 'none';
                     } else {
                         footerAction.style.display = 'flex';
@@ -1031,25 +973,6 @@
                         </div>
                     `;
                 }
-                else if (mode === 'ai_art') {
-                    let templatesHtml = this.aiTemplates.map(t => `
-                        <div onclick="app.selectAiTemplate('${t.id}')" class="ai-template-card cursor-pointer rounded-2xl overflow-hidden h-36 flex flex-col justify-end p-4 relative ${this.state.aiArtConfig.active === t.id ? 'active' : ''}" style="background: ${t.bg};">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent"></div>
-                            <span class="relative z-10 text-white font-bold text-[15px] tracking-wider drop-shadow-md">${t.name}</span>
-                        </div>
-                    `).join('');
-
-                    area.innerHTML = `
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-5 mb-8 mt-2">
-                            ${templatesHtml}
-                        </div>
-                        <div class="flex justify-start">
-                            <button onclick="app.generateAiArt()" class="w-full md:w-auto bg-gradient-to-r from-fuchsia-500 to-pink-500 text-white px-12 py-3.5 rounded-full hover:shadow-[0_6px_20px_rgba(217,70,239,0.4)] hover:-translate-y-0.5 transition-all font-bold text-[15px] flex items-center justify-center tracking-wide">
-                                <i class="fas fa-magic mr-2"></i>一键合成艺术融合码
-                            </button>
-                        </div>
-                    `;
-                }
                 else if (mode === 'form') {
                     area.innerHTML = `
                         <input type="text" id="form-title" class="w-full p-4 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-primary/50 text-sm outline-none" placeholder="表单标题 (例如：意向客户登记)">
@@ -1087,8 +1010,10 @@
             switchUrlMode(mode) {
                 this.state.urlConfig.mode = mode;
                 if (mode === 'static') {
+                    // 切换到静态码时，将二维码立刻指向输入框内容
                     this.state.urlConfig.staticUrl = document.getElementById('input-data')?.value || '';
                 } else {
+                    // 切换回活码时，重置
                     this.state.urlConfig.staticUrl = '';
                 }
                 this.updateNavUI();
@@ -1097,47 +1022,15 @@
             },
             
             handleStaticUrlInput(val) {
+                // 实时捕捉输入并自动修正协议头
                 let fullUrl = val.trim();
                 if (fullUrl && !/^https?:\/\//i.test(fullUrl)) {
                     fullUrl = 'https://' + fullUrl;
                 }
                 this.state.urlConfig.staticUrl = fullUrl;
-                this.renderQR(); 
+                this.renderQR(); // 触发实时重绘
             },
 
-            selectAiTemplate(id) {
-                this.state.aiArtConfig.active = id;
-                this.renderInputArea();
-            },
-            
-            generateAiArt() {
-                if (!this.state.aiArtConfig.active) {
-                    return alert('请先选择一个艺术模板');
-                }
-                const tpl = this.aiTemplates.find(t => t.id === this.state.aiArtConfig.active);
-                
-                const btn = document.querySelector('button[onclick="app.generateAiArt()"]');
-                const originHtml = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>神经节点解析融合中...';
-                
-                setTimeout(() => {
-                    this.state.aiArtConfig.bgUrl = tpl.bg;
-                    this.state.qrConfig.dark = tpl.textDark; 
-                    this.state.qrConfig.light = 'transparent'; 
-                    this.renderQR();
-                    
-                    btn.innerHTML = '<i class="fas fa-check-circle mr-2"></i>生成完毕，请在右侧查收';
-                    btn.classList.replace('from-fuchsia-500', 'from-emerald-500');
-                    btn.classList.replace('to-pink-500', 'to-teal-500');
-                    
-                    setTimeout(() => {
-                        btn.innerHTML = originHtml;
-                        btn.classList.replace('from-emerald-500', 'from-fuchsia-500');
-                        btn.classList.replace('to-teal-500', 'to-pink-500');
-                    }, 2000);
-                }, 1500);
-            },
-            
             async handleMainFileSelect(event) {
                 if (!this.state.isAdmin) return;
                 const files = event.target.files || (event.dataTransfer ? event.dataTransfer.files : null);
@@ -1148,7 +1041,7 @@
                 
                 const results = await this.uploadFilesConcurrent(files, (percent) => {
                     const statusText = document.getElementById('upload-status-text');
-                    if (statusText) statusText.innerText = `极速上传中: ${percent}%`;
+                    if (statusText) statusText.innerText = `极速网络上传中: ${percent}%`;
                 });
                 
                 results.forEach(res => {
@@ -1254,7 +1147,7 @@
 
             generateBlockHtml(block, isLive = false) {
                 let html = '';
-                const baseClass = isLive ? 'w-full mb-5 bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/50 overflow-hidden' : 'flex-1';
+                const baseClass = isLive ? 'w-full mb-5 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden' : 'flex-1';
                 
                 if (block.type === 'combo') {
                     const c = block.content; 
@@ -1445,43 +1338,34 @@
                 container.innerHTML = html;
             },
 
-            // ================= 二维码美化引擎与核心渲染 =================
+            // ================= 核心渲染：二维码生成引擎 =================
             renderQR() {
                 const qrContainer = document.getElementById('qrcode'); 
-                const bgLayer = document.getElementById('ai-qr-bg');
-                
                 qrContainer.innerHTML = '';
                 
                 let targetUrl = this.state.liveUrl;
+                
+                // 如果是独立网址模式中的静态码，则直接使用当前输入框内的物理链接
                 if (this.state.currentMode === 'url' && this.state.urlConfig.mode === 'static') {
                     targetUrl = this.state.urlConfig.staticUrl || 'https://';
                 }
 
-                if (this.state.aiArtConfig.active && this.state.currentMode === 'ai_art') {
-                    bgLayer.style.background = this.state.aiArtConfig.bgUrl;
-                    bgLayer.classList.remove('hidden');
-                    
-                    // 为了融合底图稍微缩小一点让边界清晰
-                    new QRCode(qrContainer, { 
-                        text: targetUrl, 
-                        width: 128, 
-                        height: 128, 
-                        colorDark : this.state.qrConfig.dark, 
-                        colorLight : 'transparent', // 透明以便透出底层艺术墙
-                        correctLevel : QRCode.CorrectLevel.H 
-                    });
-                } else {
-                    if(bgLayer) bgLayer.classList.add('hidden');
-                    
-                    new QRCode(qrContainer, { 
-                        text: targetUrl, 
-                        width: 128, // 匹配 144px 外框
-                        height: 128, 
-                        colorDark : this.state.qrConfig.dark, 
-                        colorLight : this.state.qrConfig.light === 'transparent' ? '#ffffff' : this.state.qrConfig.light, 
-                        correctLevel : QRCode.CorrectLevel.M 
-                    });
-                }
+                // 为了完美适配 1/5 比例布局中的小型二维码框，将核心渲染下调为 128px
+                new QRCode(qrContainer, { 
+                    text: targetUrl, 
+                    width: 128, 
+                    height: 128, 
+                    colorDark : '#111827', 
+                    colorLight : '#ffffff', 
+                    correctLevel : QRCode.CorrectLevel.M 
+                });
+                
+                setTimeout(() => { 
+                    const canvas = qrContainer.querySelector('canvas'); 
+                    if(canvas) { 
+                        canvas.style.borderRadius = '0.35rem'; 
+                    } 
+                }, 50);
             },
             
             downloadQR() {
@@ -1490,34 +1374,9 @@
                 
                 const url = canvas.toDataURL("image/png");
                 const a = document.createElement('a');
-                a.download = `专属活码_${new Date().getTime()}.png`;
+                a.download = `专属二维码_${new Date().getTime()}.png`;
                 a.href = url;
                 a.click();
-            },
-
-            openBeautifyModal() {
-                if(this.state.currentMode === 'ai_art') {
-                    return alert('在AI艺术码模式下，前景色已自动根据模板最佳匹配。如需手动配置，请先切换至其他菜单。');
-                }
-                
-                document.getElementById('qr-color-dark').value = this.state.qrConfig.dark === 'transparent' ? '#000000' : this.state.qrConfig.dark;
-                document.getElementById('qr-color-light').value = this.state.qrConfig.light === 'transparent' ? '#ffffff' : this.state.qrConfig.light;
-                
-                document.getElementById('beautify-modal').classList.remove('hidden');
-                document.getElementById('beautify-modal').classList.add('flex');
-            },
-            
-            closeBeautifyModal() {
-                document.getElementById('beautify-modal').classList.add('hidden');
-                document.getElementById('beautify-modal').classList.remove('flex');
-            },
-            
-            applyBeautify() {
-                this.state.qrConfig.dark = document.getElementById('qr-color-dark').value;
-                this.state.qrConfig.light = document.getElementById('qr-color-light').value;
-                
-                this.renderQR();
-                this.closeBeautifyModal();
             },
             
             generateShareLink() {
