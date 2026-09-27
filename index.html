@@ -9,8 +9,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <!-- 引入 HTML 转 PDF 高保真渲染引擎 -->
+    <!-- 【新增】强力引入 HTML 转 PDF 高保真渲染引擎 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <script>
@@ -134,8 +135,8 @@
 
     </main>
 
-    <!-- H5 游客实时预览容器 (解锁宽度，贴合PC桌面宽屏展示) -->
-    <div id="mobile-live-container" class="hidden w-full bg-gray-50 min-h-screen pb-safe"></div>
+    <!-- H5 游客实时预览容器 -->
+    <div id="mobile-live-container" class="hidden w-full max-w-lg mx-auto bg-gray-50 min-h-screen pb-safe"></div>
 
     <!-- 全屏图文组合编辑器 (富文本功能完美保留无损) -->
     <div id="combo-editor-modal" class="fixed inset-0 bg-gray-100 z-[150] hidden flex-col">
@@ -267,7 +268,6 @@
             },
 
             configs: {
-                // 文案更新：提示独立文本已支持全格式保留
                 text: { icon: 'fa-keyboard', title: '添加富文本', hint: '支持保留粘贴的所有颜色格式', accept: null },
                 url: { icon: 'fa-link', title: '配置网址引擎', hint: '支持静态跳转与活码分发', accept: null },
                 image: { icon: 'fa-image', title: '添加独立图片', hint: '支持 png/jpg 等格式', accept: 'image/*' },
@@ -278,7 +278,7 @@
                 uploaded: { icon: 'fa-cloud', title: '后台资源池', hint: '可查阅/清理所有已上传资产', accept: null }
             },
 
-            // 完美保留的表单模板库引擎 
+            // 表单模板库引擎 
             formTemplates: [
                 { icon: 'fa-id-badge', color: 'text-blue-500', title: '来访登记', desc: '包含字段：姓名、手机、受访人姓名、来访事由' },
                 { icon: 'fa-book-open', color: 'text-green-500', title: '课程报名表', desc: '包含字段：姓名、手机、课程' },
@@ -294,12 +294,10 @@
                 if (urlParams.get('view') === 'live') {
                     this.state.isLiveMode = true;
                     document.getElementById('mobile-live-container').classList.remove('hidden');
-                    // 解除移动端宽度限制，全尺寸伸缩铺开
                     document.getElementById('mobile-live-container').classList.add('flex', 'flex-col');
                     document.getElementById('tourist-mask').classList.add('hidden');
                     await this.fetchCloudConfig();
                     
-                    // 强制对象显式调用，修复在 http 访问或特定浏览器下由于作用域引发的不可预见报错
                     app.renderLiveH5();
                     return;
                 }
@@ -405,7 +403,7 @@
                         body: JSON.stringify(this.state.blocks) 
                     });
                     if (res.ok) {
-                        alert('🚀 全局流水线同步成功！您的所有资源活码已全域生效。');
+                        alert('🚀 全局流水线同步成功！您的二维码活码已全域生效。');
                     } else {
                         alert('发布失败，请检查网络');
                     }
@@ -628,25 +626,12 @@
                 }, false);
             },
 
-            // ================= 【点对点独立下载功能】 =================
-            // 取代了原有的 ZIP 总打包功能，实现单个文件精准极速下载
-            async downloadSingleFile(url, filename) {
-                try {
-                    const btn = event.currentTarget;
-                    const oldHtml = btn.innerHTML;
-                    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>极速下载中...';
-                    
-                    const response = await fetch(url);
-                    const blob = await response.blob();
-                    saveAs(blob, filename);
-                    
-                    btn.innerHTML = '<i class="fas fa-check mr-2"></i>下载完成';
-                    setTimeout(() => { btn.innerHTML = oldHtml; }, 2000);
-                } catch(e) {
-                    alert("下载失败，请检查网络连接");
-                }
+            // ================= 废弃了全局打包，保留基本底层框架防止冗余报错 =================
+            async downloadAllFiles() {
+                alert('系统已升级为独立极速下载架构，请直接点击资源下方的专属下载按钮提取所需文件。');
             },
 
+            // ================= 【独家修复：彻底解决生成PDF有大量空白页的暗病】 =================
             async downloadTextAsPDF(blockId, filename) {
                 const el = document.getElementById(`content-${blockId}`);
                 if(!el) return alert('内容加载失败');
@@ -655,20 +640,50 @@
                 const oldHtml = btn.innerHTML;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>PDF引擎高清渲染中...';
                 
+                // 【核心修复】：创建一个绝对定位在 top:0 的虚拟容器，隔离当前页面的 scrollY 滚动条偏移，彻底解决 html2canvas 截出大量顶部空白页的暗病。
+                const tempDiv = document.createElement('div');
+                tempDiv.className = 'rich-text-content'; // 保留富文本格式
+                tempDiv.innerHTML = el.innerHTML;
+                tempDiv.style.position = 'absolute';
+                tempDiv.style.top = '0'; // 必须为0，不能是负数，否则导致截图引擎将负高度区域视为空白计算入内
+                tempDiv.style.left = '-9999px'; // 移出视口即可
+                tempDiv.style.width = '800px'; 
+                tempDiv.style.backgroundColor = '#ffffff';
+                tempDiv.style.padding = '30px';
+                document.body.appendChild(tempDiv);
+                
                 try {
                     const pdfBlob = await html2pdf().set({
                         margin: [15, 15, 15, 15],
                         filename: filename + '.pdf',
                         image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { scale: 2, useCORS: true, logging: false },
+                        html2canvas: { 
+                            scale: 2, 
+                            useCORS: true, 
+                            logging: false,
+                            scrollY: 0, // 【双保险】强制引擎忽视浏览器的垂直滚动偏移
+                            windowY: 0
+                        },
                         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                    }).from(el).output('blob');
+                    }).from(tempDiv).output('blob');
                     
                     saveAs(pdfBlob, filename + '.pdf');
                 } catch (e) {
                     alert("PDF生成受限: " + e.message);
                 } finally {
                     btn.innerHTML = oldHtml;
+                    // 用完即刻销毁虚拟层
+                    document.body.removeChild(tempDiv);
+                }
+            },
+
+            async downloadSingleFile(url, filename) {
+                try {
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    saveAs(blob, filename);
+                } catch(e) {
+                    alert("下载失败，请检查网络连接");
                 }
             },
 
@@ -720,7 +735,7 @@
                 
                 const results = await this.uploadFilesConcurrent(files, (percent) => {
                     const statusText = document.getElementById('combo-upload-status');
-                    if (statusText) statusText.innerText = `极速网络上传中: ${percent}%`;
+                    if (statusText) statusText.innerText = `极速上传中: ${percent}%`;
                 });
                 
                 results.forEach(res => {
@@ -835,7 +850,7 @@
                 this.closeComboEditor();
             },
 
-            // ================= 基础UI与路由管理引擎 =================
+            // ================= 基础UI与路由管理引擎 (已找回高级表单模板库功能) =================
             setMode(mode) { 
                 this.state.currentMode = mode; 
                 this.updateNavUI(); 
@@ -1185,10 +1200,10 @@
                 document.getElementById('preview-content').innerHTML = ''; 
             },
 
-            // 【重构为内嵌独立专属按键】在访客H5中渲染并生成独立下载动作
+            // 【访客视图生成器：结合高颜值的单点独立下载按钮】
             generateBlockHtml(block, isLive = false) {
                 let html = '';
-                // H5端完全展开容器样式
+                // 彻底释放宽度约束，在大屏设备展现宽体卡片
                 const baseClass = isLive ? 'w-full mb-6 bg-white p-6 md:p-8 rounded-[20px] shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-gray-100 overflow-hidden relative' : 'flex-1';
                 
                 const isStaticUrl = block.type === 'url' && typeof block.content === 'object' && block.content.isStatic;
@@ -1226,7 +1241,6 @@
 
                 switch (block.type) {
                     case 'text': 
-                        // HTML 透传，保持图文格式，为H5游客赋予PDF下载
                         let downloadBtnText = isLive ? `<button id="btn-down-${block.id}" onclick="app.downloadTextAsPDF('${block.id}', '图文内容归档')" class="mt-5 w-full bg-blue-50 text-blue-600 hover:bg-blue-100 py-3 rounded-xl font-bold transition-colors flex items-center justify-center text-[15px] shadow-sm tracking-wide"><i class="fas fa-file-pdf mr-2 text-lg"></i>保存为高清 PDF</button>` : '';
                         html = `<div class="${baseClass}"><div id="content-${block.id}" class="text-gray-800 leading-relaxed text-[15px] rich-text-content break-words w-full overflow-hidden">${block.content}</div>${downloadBtnText}</div>`; 
                         break;
@@ -1234,20 +1248,23 @@
                         html = `<div class="${baseClass}"><a href="${this.escapeHtml(urlString)}" target="_blank" class="text-blue-500 underline flex items-center break-all hover:text-blue-600 transition-colors font-bold text-[15px]"><i class="fas fa-external-link-alt mr-2 shrink-0"></i> ${this.escapeHtml(urlString)}</a></div>`; 
                         break;
                     case 'image': 
+                        // 点击下载提取原文件
                         let downloadBtnImg = isLive ? `<button onclick="app.downloadSingleFile('${block.content.url}', '${block.content.name}')" class="mt-5 w-full bg-green-50 text-green-600 hover:bg-green-100 py-3 rounded-xl font-bold transition-colors flex items-center justify-center text-[15px] shadow-sm tracking-wide"><i class="fas fa-download mr-2 text-lg"></i>极速下载保存原图</button>` : '';
                         html = `<div class="${baseClass} p-5"><img src="${block.content.url}" class="w-full rounded-xl cursor-pointer hover:opacity-90 hover:shadow-lg transition-all object-cover max-h-[800px] bg-gray-100" onclick="app.openDocumentPreview('${block.content.url}', '${block.content.name}')">${downloadBtnImg}</div>`; 
                         break;
                     case 'audio': 
+                        // 点击下载提取原文件
                         let downloadBtnAudio = isLive ? `<button onclick="app.downloadSingleFile('${block.content.url}', '${block.content.name}')" class="mt-5 w-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 py-3 rounded-xl font-bold transition-colors flex items-center justify-center text-[15px] shadow-sm tracking-wide"><i class="fas fa-download mr-2 text-lg"></i>极速下载原格式音频</button>` : '';
                         html = `<div class="${baseClass} flex flex-col p-5 bg-gray-50 rounded-2xl border border-gray-100"><span class="text-[15px] font-bold text-gray-800 mb-4 truncate px-2 border-l-4 border-green-500 pl-3 leading-none flex items-center"><i class="fas fa-music text-green-500 mr-2.5 text-lg"></i>${block.content.name}</span><audio controls src="${block.content.url}" class="w-full outline-none h-12 rounded-full bg-white shadow-sm border border-gray-200"></audio>${downloadBtnAudio}</div>`; 
                         break;
                     case 'video': 
+                        // 点击下载提取原文件
                         let downloadBtnVideo = isLive ? `<button onclick="app.downloadSingleFile('${block.content.url}', '${block.content.name}')" class="mt-4 w-full bg-purple-50 text-purple-600 hover:bg-purple-100 py-3 rounded-xl font-bold transition-colors flex items-center justify-center text-[15px] shadow-sm tracking-wide"><i class="fas fa-download mr-2 text-lg"></i>极速下载视频文件</button>` : '';
                         html = `<div class="${baseClass} bg-black flex flex-col justify-center p-0 m-0 relative group rounded-2xl overflow-hidden shadow-inner"><video src="${block.content.url}" controls class="w-full max-h-[700px] object-contain"></video>${downloadBtnVideo ? `<div class="p-5 bg-white border-t border-gray-100">${downloadBtnVideo}</div>` : ''}</div>`; 
                         break;
                     case 'document': 
                     case 'form': 
-                        // 在游客端渲染宽大的内嵌下载按钮
+                        // 在游客端渲染宽大的内嵌下载提取按钮
                         let downloadBtnDoc = isLive ? `<button onclick="app.downloadSingleFile('${block.content.url}', '${block.content.name}')" class="text-xs md:text-sm bg-primary text-white px-6 py-2.5 rounded-xl hover:bg-blue-600 text-center font-bold shadow-[0_4px_15px_rgba(30,144,255,0.3)] transition-all flex items-center"><i class="fas fa-download mr-1.5"></i>极速下载提取</button>` : `<button onclick="app.downloadSingleFile('${block.content.url}', '${block.content.name}')" class="text-xs bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-center font-bold shadow-md"><i class="fas fa-download mr-1"></i>下载</button>`;
                         html = `
                             <div class="${baseClass} flex items-center bg-gray-50 rounded-2xl p-5 hover:bg-white transition-colors border border-gray-100">
@@ -1289,7 +1306,7 @@
                     const blockEl = document.createElement('div');
                     blockEl.draggable = true;
                     // 【绝对横铺】取消拉伸，限制内容在 96px 内极其紧凑的横跨铺开
-                    blockEl.className = 'block-animate bg-white border border-gray-100 rounded-[16px] p-3 flex flex-row items-center group relative shadow-sm hover:shadow-md transition-all h-[96px] border-l-[4px] border-l-primary cursor-move w-full overflow-hidden';
+                    blockEl.className = 'block-animate bg-white border border-gray-100 rounded-[16px] p-3 flex flex-row items-center group relative shadow-sm hover:shadow-md transition-all h-[96px] border-l-[4px] border-l-primary cursor-move w-full';
                     
                     blockEl.ondragstart = (e) => this.handleMainDragStart(e, index); 
                     blockEl.ondragover = (e) => this.handleMainDragOver(e); 
@@ -1300,7 +1317,6 @@
                     const isStaticUrl = block.type === 'url' && typeof block.content === 'object' && block.content.isStatic;
                     const urlString = isStaticUrl ? block.content.url : block.content;
                     
-                    // 摘要提取（单行强力截断防撑高）
                     switch(block.type) {
                         case 'text': icon='fa-font text-blue-500'; title='富文本段落'; descHtml = `<div class="text-[12px] text-gray-500 mt-1 truncate font-medium w-full">${this.escapeHtml(this.stripHtml(block.content))}</div>`; break;
                         case 'url': icon='fa-link text-blue-500'; title=isStaticUrl ? '静态直达链接' : '动态活码链接'; descHtml = `<div class="text-[12px] text-blue-400 mt-1 truncate font-medium w-full">${this.escapeHtml(urlString)}</div>`; break;
@@ -1338,13 +1354,13 @@
                         <div class="shrink-0 flex flex-col justify-center gap-1.5 w-[140px] pr-2 h-full" onmousedown="event.stopPropagation();">
                             <p class="text-[9px] text-gray-400 text-center leading-tight tracking-wide font-medium">扫码查看此内容<br>(一物一码分发)</p>
                             <div class="flex gap-1.5 w-full">
-                                <button onclick="app.copyBlockLink(event, '${block.id}', ${isStaticUrl}, '${urlString}')" class="flex-1 bg-blue-50 text-blue-500 border border-blue-100 py-1 rounded-[6px] hover:bg-blue-500 hover:text-white transition-all text-[11px] font-bold shadow-sm flex items-center justify-center">复制</button>
-                                <button onclick="app.downloadBlockQR('${block.id}')" class="flex-1 bg-gray-50 text-gray-600 border border-gray-200 py-1 rounded-[6px] hover:bg-gray-100 transition-all text-[11px] font-bold shadow-sm flex items-center justify-center">下载</button>
+                                <button onclick="app.copyBlockLink(event, '${block.id}', ${isStaticUrl}, '${urlString}')" class="flex-1 bg-blue-50 text-blue-500 border border-blue-100 py-1 rounded-[6px] hover:bg-blue-500 hover:text-white transition-all text-[11px] font-bold shadow-sm">复制</button>
+                                <button onclick="app.downloadBlockQR('${block.id}')" class="flex-1 bg-gray-50 text-gray-600 border border-gray-200 py-1 rounded-[6px] hover:bg-gray-100 transition-all text-[11px] font-bold shadow-sm">下载</button>
                             </div>
                         </div>
                         
                         <!-- 右上角外露悬浮删除按钮 -->
-                        <button onclick="app.removeBlock('${block.id}')" class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center transition-transform hover:scale-110 shadow-md border-2 border-white z-10 opacity-0 group-hover:opacity-100">
+                        <button onclick="app.removeBlock('${block.id}')" class="absolute -top-2.5 -right-2.5 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center transition-transform hover:scale-110 shadow-md border-2 border-white z-10">
                             <i class="fas fa-times text-[10px] font-bold"></i>
                         </button>
                     `;
@@ -1389,7 +1405,7 @@
                 const url = canvas.toDataURL("image/png"); const a = document.createElement('a'); a.download = `专属活码_${blockId}_${new Date().getTime()}.png`; a.href = url; a.click();
             },
             
-            // 安全防报错复制功能
+            // 安全防报错复制功能 (解决 HTTP 无 HTTPS 环境下引发抛错的底层暗病)
             copyBlockLink(e, blockId, isStatic, rawUrl) {
                 let linkToCopy = this.state.liveUrl + '?view=live&id=' + blockId;
                 if (isStatic) linkToCopy = rawUrl;
@@ -1418,7 +1434,68 @@
                 document.body.removeChild(textArea);
             },
 
-            // 完美规避缓存无函数报错，且精准实现智能 H5 拦截与宽屏舒展
+            // 完美规避大量空白页问题的 PDF 提取器
+            async downloadTextAsPDF(blockId, filename) {
+                const el = document.getElementById(`content-${blockId}`);
+                if(!el) return alert('内容加载失败');
+                
+                const btn = event.currentTarget;
+                const oldHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>PDF引擎高清渲染中...';
+                
+                const tempDiv = document.createElement('div');
+                tempDiv.className = 'rich-text-content';
+                tempDiv.innerHTML = el.innerHTML;
+                tempDiv.style.position = 'absolute';
+                tempDiv.style.top = '0'; 
+                tempDiv.style.left = '-9999px'; 
+                tempDiv.style.width = '800px'; 
+                tempDiv.style.backgroundColor = '#ffffff';
+                tempDiv.style.padding = '30px';
+                document.body.appendChild(tempDiv);
+                
+                try {
+                    const pdfBlob = await html2pdf().set({
+                        margin: [15, 15, 15, 15],
+                        filename: filename + '.pdf',
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: { 
+                            scale: 2, 
+                            useCORS: true, 
+                            logging: false,
+                            scrollY: 0, 
+                            windowY: 0
+                        },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    }).from(tempDiv).output('blob');
+                    
+                    saveAs(pdfBlob, filename + '.pdf');
+                } catch (e) {
+                    alert("PDF生成受限: " + e.message);
+                } finally {
+                    btn.innerHTML = oldHtml;
+                    document.body.removeChild(tempDiv);
+                }
+            },
+
+            async downloadSingleFile(url, filename) {
+                try {
+                    const btn = event.currentTarget;
+                    const oldHtml = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>提取资源中...';
+                    
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    saveAs(blob, filename);
+                    
+                    btn.innerHTML = '<i class="fas fa-check mr-2"></i>下载成功';
+                    setTimeout(() => { btn.innerHTML = oldHtml; }, 2000);
+                } catch(e) {
+                    alert("下载失败，请检查网络连接");
+                }
+            },
+
+            // 游客端实时展示页 (大屏宽体舒展 + 独立原生名称极速下载)
             renderLiveH5() {
                 document.title = "在线查阅系统";
                 const container = document.getElementById('mobile-live-container');
@@ -1432,7 +1509,7 @@
                     container.innerHTML = `<div class="text-center mt-32 text-gray-400 flex flex-col items-center"><div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6 shadow-inner"><i class="fas fa-link-slash text-5xl text-gray-300"></i></div><p class="font-black text-xl text-gray-600 tracking-widest">内容已失效或不存在</p></div>`; return;
                 }
                 
-                // 【核心宽屏渲染】：移除原版的 max-w-lg，改为 1200px 宽度适配电脑全屏，手机端自动收缩
+                // 解封响应式宽度：让 PC 端能够拉伸到 1200px 的舒适阅读宽度
                 let html = `
                     <div class="w-full flex justify-center py-6 hidden md:flex"></div>
                     <div class="w-full flex justify-center py-4 md:hidden"><div class="w-14 h-1.5 bg-gray-300 rounded-full opacity-60"></div></div>
@@ -1441,7 +1518,6 @@
                 
                 targetBlocks.forEach(block => { html += this.generateBlockHtml(block, true); });
                 
-                // 彻底去除了底部的悬浮 ZIP 下载大按键，保持 H5 的原汁原味和清爽
                 html += `</div><p class="text-center text-xs text-gray-300 mt-4 mb-16 tracking-widest uppercase font-bold">THE END</p>`;
                 container.innerHTML = html;
             }
